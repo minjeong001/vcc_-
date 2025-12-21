@@ -23,6 +23,7 @@
  <details>
   <summary> 상품 인식 파일 코드 </summary>
 ```python
+  
 from picamera2 import Picamera2
 import cv2
 import os
@@ -80,9 +81,9 @@ cv2.waitKey(1)
 cam.stop()
 cv2.destroyAllWindows()
 </details>
-
-</details>
 ```
+</details>
+
 
 2. ### 🚧 실시간 장애물 감지
  #### 장애물이 카트 앞에 위치할 경우 임계거리를 설정하여 임계거리 안으로 들어오면, 손목밴드의 진동을 이용해 사용자에게 알림. 장애물 거리에 따라 진동 속도를 다르게 하여 위험도를 표현.
