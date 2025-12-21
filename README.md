@@ -303,6 +303,65 @@ exit(0)
 ```
 </details>
 
+<details>
+   <summary> 메인 함수 코드 </summary>
+
+```python
+from gpiozero import Button
+import subprocess
+import os
+import time
+from gtts import gTTS
+import uuid
+
+
+button = Button(17, pull_up=True, bounce_time=0.3)
+
+def speak(text):
+    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang='ko')
+    tts.save(filename)
+    subprocess.call(f'mpg123 "{filename}"', shell=True)
+    os.remove(filename)
+
+
+def run_and_wait(cmd):
+    return subprocess.call(cmd, shell=True)
+
+first_run = True
+
+while True:
+
+    if first_run:
+        print("버튼 누르면 인식 시작.")
+        button.wait_for_press()
+        first_run = False
+
+    else:
+        speak("상품 인식을 계속합니다.")
+
+    speak("상품 인식을 시작합니다. 잠시만 기다려주세요.")
+
+
+    run_and_wait("python3 /home/see2407me/d.py")
+    run_and_wait("python3 /home/see2407me/2.py")
+    run_and_wait("python3 /home/see2407me/tts.py")
+
+    speak("상품 인식을 계속 할까요? 계속하려면 5초안에 버튼을 눌러주세요.")
+
+    start = time.time()
+    pressed = False
+
+    while time.time() - start < 5:
+        if button.is_pressed:
+            pressed = True
+            break
+        time.sleep(0.1)
+
+    if not pressed:
+        speak("프로그램을 종료합니다.")
+        break
+```
 </details>
 
 ---
