@@ -172,8 +172,33 @@ cv2.destroyAllWindows()
 </details>
 
 <details>
-   <summary> 음성,DB 상세정보 코드 </summary>
- 
+   <summary> 음성 및 DB 상세정보 코드 </summary>
+
+```python
+sqlite3 /home/see2407me/ramen_info.db
+
+CREATE TABLE ramen_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    calories INTEGER,
+    sodium INTEGER,
+    fat REAL,
+    carbohydrate REAL,
+    protein REAL
+);
+
+INSERT INTO ramen_info (name, calories, sodium, fat, carbohydrate, protein) VALUES
+('진라면', 500, 1900, 16, 78, 10),
+('신라면', 505, 1890, 17, 80, 9),
+('너구리', 510, 1940, 18, 76, 8),
+('짜파게티', 600, 1200, 21, 90, 10),
+('불닭볶음면', 530, 1600, 20, 85, 11);
+
+.exit  #나가기
+
+SELECT * FROM ramen_info;  #내용확인
+```
+
 ```python
 import sqlite3
 import os
