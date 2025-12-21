@@ -194,9 +194,12 @@ INSERT INTO ramen_info (name, calories, sodium, fat, carbohydrate, protein) VALU
 ('짜파게티', 600, 1200, 21, 90, 10),
 ('불닭볶음면', 530, 1600, 20, 85, 11);
 
-.exit  #나가기
+.exit  # 나가기
 
-SELECT * FROM ramen_info;  #내용확인
+UPDATE ramen_info SET sodium = 1950 WHERE name = '신라면';  # 내용 변경시 명령어
+ALTER TABLE ramen_info ADD COLUMN price INTEGER;  # 열 추가 (가격)
+
+SELECT * FROM ramen_info;  # 내용확인
 ```
 
 ```python
