@@ -21,7 +21,7 @@
 
   상품 인식 파일, 유통기한 추출 파일, DB 파일 모듈화, main파일에서 스크립트 호출
 
-  <details>
+ <details>
   <summary> 상품 인식 파일 코드 </summary>
   ```python
  <상품 인식.py>
@@ -81,9 +81,8 @@ cv2.waitKey(1)
 
 cam.stop()
 cv2.destroyAllWindows()
-```
-</details>
-```
+``` </details>
+
 </details>
 
 2. ### 🚧 실시간 장애물 감지
