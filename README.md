@@ -171,7 +171,6 @@ cv2.destroyAllWindows()
 
 ```
 </details>
-```
 
 </details>
 
