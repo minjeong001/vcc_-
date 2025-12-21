@@ -175,7 +175,8 @@ cv2.destroyAllWindows()
    <summary> 음성 및 DB 상세정보 코드 </summary>
 
 ```python
-sqlite3 /home/see2407me/ramen_info.db
+#DB만들기
+sqlite3 /home/생성할 DB경로
 
 CREATE TABLE ramen_info (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
