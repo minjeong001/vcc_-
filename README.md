@@ -16,75 +16,83 @@
    - **OCR 기술(Pytesseract)**을 활용해 유통기한을 판독하고, **gTTS 음성 안내**로 사용자에게 정보를 제공합.
    - 상품 인식 후 **데이터베이스**에서 가격, 칼로리, 영양 성분 등 정보를 조회하여 **음성으로 출력**.
 
-  <details>
-  <summary>👉 상품 인식 기능 세부 내용(코드)</summary>
-  상품 인식 파일, 유통기한 추출 파일, DB 파일 모듈화, main파일에서 스크립트 호출
-   
- <details>
-  <summary> 상품 인식 파일 코드 </summary>
+---
+<details>
+<summary>👉 상품 인식 기능 세부 내용(코드)</summary>
+
+ 상품 인식 파일, 유통기한 추출 파일, DB 파일 모듈화, main파일에서 스크립트 호출
+
+<br>
+
+<details>
+<summary> 상품 인식 파일 코드 </summary>
+
 ```python
-  
 from picamera2 import Picamera2
 import cv2
 import os
 from gtts import gTTS
 import uuid
 import subprocess
+from ultralytics import YOLO
 
 def speak(text):
-filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
-tts = gTTS(text=text, lang='ko')
-tts.save(filename)
-subprocess.call(f'mpg123 "{filename}"', shell=True)
-os.remove(filename)
+    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang='ko')
+    tts.save(filename)
+    subprocess.call(f'mpg123 "{filename}"', shell=True)
+    os.remove(filename)
 
 speak("상품을 카메라 앞에 나둬주세요.")
+
 model = YOLO("학습 파일 경로")
 
 output_path = "결과 파일 경로"
 os.makedirs(output_path, exist_ok=True)
 
 cam = Picamera2()
-cam.configure(cam.create_video_configuration(main={"format":"XRGB8888","size":(320,240)}))
+cam.configure(
+    cam.create_video_configuration(
+        main={"format": "XRGB8888", "size": (320, 240)}
+    )
+)
 cam.start()
 
 label_to_kor = {
-"shinramen": "신라면",
-"jinramyun": "진라면",
-"nuguri": "너구리",
-"jjapagetti": "짜파게티",
-"buldakbokkeummyun": "불닭볶음면"
+    "shinramen": "신라면",
+    "jinramyun": "진라면",
+    "nuguri": "너구리",
+    "jjapagetti": "짜파게티",
+    "buldakbokkeummyun": "불닭볶음면"
 }
 
 print("인식모드 시작")
 
 while True:
-frame = cam.capture_array()
-frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
+    frame = cam.capture_array()
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
 
-results = model(frame)
-boxes = results[0].boxes
+    results = model(frame)
+    boxes = results[0].boxes
 
-if len(boxes) > 0:
-cls = int(boxes.cls[0])
-label = model.names[cls]
+    if len(boxes) > 0:
+        cls = int(boxes.cls[0])
+        label = model.names[cls]
 
-kor = label_to_kor.get(label, None)
-if kor:
-with open(output_path + "ramen.txt", "w") as f:
-f.write(label)
+        kor = label_to_kor.get(label)
+        if kor:
+            with open(os.path.join(output_path, "ramen.txt"), "w") as f:
+                f.write(label)
 
-print(f"제품 인식됨: {kor}")
-break
-cv2.waitKey(1)
+            print(f"제품 인식됨: {kor}")
+            break
+
+    cv2.waitKey(1)
 
 cam.stop()
 cv2.destroyAllWindows()
 
-```
-</details>
-```
-</details>
+</details> </details> ```
 
 
 2. ### 🚧 실시간 장애물 감지
