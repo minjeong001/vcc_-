@@ -81,6 +81,7 @@ cv2.waitKey(1)
 
 cam.stop()
 cv2.destroyAllWindows()
+```
 </details>
   ```
 </details>
