@@ -80,6 +80,8 @@ cv2.waitKey(1)
 
 cam.stop()
 cv2.destroyAllWindows()
+
+```
 </details>
 ```
 </details>
@@ -97,9 +99,9 @@ cv2.destroyAllWindows()
   여기에 접히는 내용을 작성합니다.
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
-  ```python
+```python
   print("예시 코드")
-  ```
+```
 </details>
 
 3. ### 🧭 실내 경로 안내
@@ -112,9 +114,9 @@ cv2.destroyAllWindows()
   여기에 접히는 내용을 작성합니다.
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
-  ```python
+```python
   print("예시 코드")
-  ```
+```
 </details>
 
 ## 🛠 기술 스택
