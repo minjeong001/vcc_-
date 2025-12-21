@@ -94,6 +94,7 @@ cv2.destroyAllWindows()
 
 <details>
 <summary> 유통기한 추출 파일 코드 </summary>
+   
 ```python
 from picamera2 import Picamera2
 import pytesseract
@@ -168,7 +169,9 @@ while True:
 cam.stop()
 cv2.destroyAllWindows()
 
-</details>```
+```
+</details>
+```
 
 </details>
 
