@@ -19,11 +19,69 @@
   <details>
   <summary>👉 상품 인식 기능 세부 내용(코드)</summary>
 
-  여기에 접히는 내용을 작성합니다.
-  여러 줄도 가능하고 마크다운도 쓸 수 있어요.
+  상품 인식 파일, 유통기한 추출 파일, DB 파일 모듈화, main파일에서 스크립트 호출
 
+  <details>
+  <summary> 상품 인식 파일 코드 </summary>
   ```python
-  print("예시 코드")
+ <상품 인식.py>
+from picamera2 import Picamera2
+import cv2
+import os
+from gtts import gTTS
+import uuid
+import subprocess
+
+def speak(text):
+filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+tts = gTTS(text=text, lang='ko')
+tts.save(filename)
+subprocess.call(f'mpg123 "{filename}"', shell=True)
+os.remove(filename)
+
+speak("상품을 카메라 앞에 나둬주세요.")
+model = YOLO("학습 파일 경로")
+
+output_path = "결과 파일 경로"
+os.makedirs(output_path, exist_ok=True)
+
+cam = Picamera2()
+cam.configure(cam.create_video_configuration(main={"format":"XRGB8888","size":(320,240)}))
+cam.start()
+
+label_to_kor = {
+"shinramen": "신라면",
+"jinramyun": "진라면",
+"nuguri": "너구리",
+"jjapagetti": "짜파게티",
+"buldakbokkeummyun": "불닭볶음면"
+}
+
+print("인식모드 시작")
+
+while True:
+frame = cam.capture_array()
+frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
+
+results = model(frame)
+boxes = results[0].boxes
+
+if len(boxes) > 0:
+cls = int(boxes.cls[0])
+label = model.names[cls]
+
+kor = label_to_kor.get(label, None)
+if kor:
+with open(output_path + "ramen.txt", "w") as f:
+f.write(label)
+
+print(f"제품 인식됨: {kor}")
+break
+cv2.waitKey(1)
+
+cam.stop()
+cv2.destroyAllWindows()
+</details>
   ```
 </details>
 
@@ -70,7 +128,7 @@
 ## 
 ## 완성 모형
 ### 시연 영상
-## 🚀 기대 효과
+## 기대 효과
 
 - **시각장애인의 자율적인 쇼핑 환경 제공**  
 - **충돌 방지를 통한 안전성 확보**  
@@ -78,5 +136,3 @@
 - **다양한 유통 환경에 적용 가능한 범용 모듈**
 
 ---
-
-👉 더 많은 AI 기반 프로젝트는 [GPTOnline.ai/ko](https://gptonline.ai/ko/)에서 확인하세요!
