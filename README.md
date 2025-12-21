@@ -19,7 +19,6 @@ vcc팀
 1. ### 🏷️ 상품 및 유통기한 식별
 
 ---
-#### 
 카메라에 상품을 인식하면 AI 학습을 통해 제품명을 알려주고 실시간으로 유통기한을 판독하고 상품과 관련한 DB를 통해 사용자에게 제품명, 가격, 유통기한 제공. 필요에 따라 제품에 관한 상세정보도 제공. 동일 카테고리내에서 제품 구별.
 
    - 라벨링 된 이미지를 이용하여 AI 학습. (Roboflow, Google colab 이용)
@@ -34,7 +33,7 @@ vcc팀
 상품 인식 파일, 유통기한 추출 파일, DB 파일 모듈화, main파일에서 스크립트 호출
 <br>
 <details>
-<summary> 상품 인식 파일 코드 </summary>
+   <summary> 상품 인식 파일 코드 </summary>
 
 ```python
 from picamera2 import Picamera2
@@ -104,7 +103,7 @@ cv2.destroyAllWindows()
 </details>
 
 <details>
-<summary> 유통기한 추출 파일 코드 </summary>
+   <summary> 유통기한 추출 파일 코드 </summary>
    
 ```python
 from picamera2 import Picamera2
@@ -185,8 +184,6 @@ cv2.destroyAllWindows()
 
 </details>
 
-#####
-
 2. ### 🚧 실시간 장애물 감지
  #### 장애물이 카트 앞에 위치할 경우 임계거리를 설정하여 임계거리 안으로 들어오면, 손목밴드의 진동을 이용해 사용자에게 알림. 장애물 거리에 따라 진동 속도를 다르게 하여 위험도를 표현.
    - **아두이노 + 거리 센서**를 활용해 전방 장애물 거리 측정.
@@ -203,8 +200,6 @@ cv2.destroyAllWindows()
   print("예시 코드")
 ```
 </details>
-
-######
 
 3. ### 🧭 실내 경로 안내
  #### 사용자의 위치를 인식하여 목적지의 경로를 계산하여 음성으로 경로를 안내함.
