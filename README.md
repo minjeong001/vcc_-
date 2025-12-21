@@ -18,12 +18,11 @@
 
   <details>
   <summary>👉 상품 인식 기능 세부 내용(코드)</summary>
-
   상품 인식 파일, 유통기한 추출 파일, DB 파일 모듈화, main파일에서 스크립트 호출
-
+   
  <details>
   <summary> 상품 인식 파일 코드 </summary>
-  ```python
+```python
 from picamera2 import Picamera2
 import cv2
 import os
