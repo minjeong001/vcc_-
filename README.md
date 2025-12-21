@@ -343,11 +343,11 @@ while True:
     speak("상품 인식을 시작합니다. 잠시만 기다려주세요.")
 
 
-    run_and_wait("python3 /home/see2407me/d.py")
-    run_and_wait("python3 /home/see2407me/2.py")
-    run_and_wait("python3 /home/see2407me/tts.py")
+    run_and_wait("python3 /home/상품 인식 코드 경로")
+    run_and_wait("python3 /home/유통기한 추출 코드 경로")
+    run_and_wait("python3 /home/음성 및 DB 코드 경로")
 
-    speak("상품 인식을 계속 할까요? 계속하려면 5초안에 버튼을 눌러주세요.")
+    speak("상품 인식을 계속 하겠습니까? 계속하려면 5초안에 버튼을 눌러주세요.")
 
     start = time.time()
     pressed = False
