@@ -91,6 +91,86 @@ cam.stop()
 cv2.destroyAllWindows()
 ```
 </details>
+
+<details>
+<summary> 유통기한 추출 파일 코드 </summary>
+```python
+from picamera2 import Picamera2
+import pytesseract
+import cv2
+import re
+import os
+import time
+from gtts import gTTS
+import uuid
+import subprocess
+
+
+output_path = "/home/see2407me/result/"
+os.makedirs(output_path, exist_ok=True)
+
+def speak(text):
+    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang='ko')
+    tts.save(filename)
+    subprocess.call(f'mpg123 "{filename}"', shell=True)
+    os.remove(filename)
+
+def extract_date(text):
+    m = re.search(r"\d{4}\.\d{2}\.\d{2}", text)
+    if m:
+        return m.group()
+    return None
+
+speak("유통기한 인식을 위해 상품을 돌려주세요.")
+
+cam = Picamera2()
+cam.configure(cam.create_video_configuration(main={"format":"XRGB8888","size":(640,480)}))
+cam.start()
+time.sleep(1)
+
+print("자동 인식 모드 시작")
+
+frame_count = 0
+max_attempts = 100
+
+while True:
+    frame = cam.capture_array()
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
+    cv2.imshow("OCR", frame)
+
+    frame_count += 1
+    if frame_count % 8 != 0:
+        if cv2.waitKey(1) == ord('q'):
+            break
+        continue
+
+    print("시도중...")
+    text = pytesseract.image_to_string(frame, lang='kor+eng')
+    expiry = extract_date(text)
+
+    if expiry:
+        with open(output_path + "expiry.txt", "w") as f:
+            f.write(expiry)
+
+        print("유통기한:", expiry)
+        break
+    else:
+        print("유통기한 인식 실패 : 재시도 중”)
+
+    if frame_count > max_attempts:
+        speak("유통기한을 찾지 못했습니다. 상품 위치를 조정해주세요.")
+        break
+
+    if cv2.waitKey(1) == ord('q'):
+        break
+
+cam.stop()
+cv2.destroyAllWindows()
+
+```
+</details>
+```
 </details>
 
 2. ### 🚧 실시간 장애물 감지
