@@ -171,6 +171,107 @@ cv2.destroyAllWindows()
 ```
 </details>
 
+<details>
+   <summary> 음성,DB 상세정보 코드 </summary>
+ 
+```python
+import sqlite3
+import os
+from gtts import gTTS
+import time
+import speech_recognition as sr
+import uuid
+import subprocess
+
+def speak(text):
+    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang='ko')
+    tts.save(filename)
+    subprocess.call(f'mpg123 "{filename}"', shell=True)
+    os.remove(filename)
+    time.sleep(0.3)
+
+
+def format_expiry(expiry):
+    y, m, d = expiry.split('.')
+    return f"{y} 년 {m} 월 {d} 일“
+
+label_to_kor = {
+    "shinramen": "신라면”,
+    "jinramyun": "진라면“,
+    "nuguri": "너구리”,
+    "jjapagetti": "짜파게티“,
+    "buldakbokkeummyun": "불닭볶음면”
+}
+
+def recognize_yes_no():
+    r = sr.Recognizer()
+    with sr.Microphone(device_index=1) as source:
+        speak("상세 정보를 읽을까요? 네 또는 아니요 라고 말씀해주세요")
+        try:
+            audio = r.listen(source, timeout=5)
+            result = r.recognize_google(audio, language="ko-KR")
+
+            YES_KEYWORDS = {"네", "예", "응", "해주세요"}
+            if any(keyword in result for keyword in YES_KEYWORDS):
+                return "yes"
+            elif "아니요" in result:
+                return "no“
+
+        except:
+            return "unknown"
+    return "unknown"
+
+with open("/home/텍스트 파일 경로") as f:
+    ramen_label = f.read().strip()
+
+kor_name = label_to_kor.get(ramen_label, ramen_label)
+
+with open("/home/see2407me/result/expiry.txt") as f:
+    expiry = f.read().strip()
+
+expiry = format_expiry(expiry)
+conn = sqlite3.connect('/home/DB 경로')
+cursor = conn.cursor()
+cursor.execute("SELECT * FROM ramen_info WHERE name=?", (kor_name,))
+row = cursor.fetchone()
+conn.close()
+
+speak(f"이 제품은 {kor_name}입니다.")
+
+if row:
+    _, name, cal, sodium, fat, carb, protein, price = row
+    speak(f”가격은 {price}원 이고, 유통기한은 {expiry}입니다.")
+else:
+    price_text = ""
+time.sleep(1)
+
+print("상세 정보 여부 대기중")
+
+answer = recognize_yes_no()
+
+if answer == "yes":
+    if row:
+        info = (
+        f"{name}의 상세정보입니다. "
+        f"열량은 {cal} 킬로칼로리"
+        f"탄수화물 {carb}그램"
+        f"지방 {fat} 그램,"
+        f"나트륨 {sodium}밀리그램"
+        f"단백질 {protein}그램입니다."
+    )
+        speak(info)
+    else:
+        speak("상세정보를 찾을 수 없습니다.")
+elif answer == "no":
+    speak("프로그램을 종료합니다.”)
+else:
+    speak("음성 인식을 실패했습니다. 프로그램을 종료합니다.“)
+
+exit(0)
+```
+</details>
+
 </details>
 
 ---
