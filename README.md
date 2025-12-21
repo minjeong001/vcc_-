@@ -44,7 +44,7 @@ speak("상품을 카메라 앞에 나둬주세요.")
 
 model = YOLO("학습 파일 경로")
 
-output_path = "결과 파일 경로"
+output_path = "/home/파일 저장 경로/"
 os.makedirs(output_path, exist_ok=True)
 
 cam = Picamera2()
@@ -106,7 +106,7 @@ import uuid
 import subprocess
 
 
-output_path = "/home/see2407me/result/"
+output_path = "/home/파일 저장 경로/"
 os.makedirs(output_path, exist_ok=True)
 
 def speak(text):
@@ -161,7 +161,7 @@ while True:
     if frame_count > max_attempts:
         speak("유통기한을 찾지 못했습니다. 상품 위치를 조정해주세요.")
         break
-
+	
     if cv2.waitKey(1) == ord('q'):
         break
 
