@@ -168,9 +168,8 @@ while True:
 cam.stop()
 cv2.destroyAllWindows()
 
-```
-</details>
-```
+</details>```
+
 </details>
 
 2. ### 🚧 실시간 장애물 감지
