@@ -24,6 +24,7 @@
 	- 상품은 라면을 중심으로 (너구리, 짜파게티, 신라면, 진라면, 불닭볶음면) 코드 작성
 	
 <details>
+	
    <summary> 상품 YOLOv8 인식 관련 코드 </summary>
 	
 ```python
@@ -363,6 +364,7 @@ while True:
         speak("프로그램을 종료합니다.")
         break
 ```
+
 </details>
 
 ---
