@@ -440,7 +440,7 @@ while True:
 <summary>전체 main 코드</summary>
 
 ```python
- from gpiozero import Button
+from gpiozero import Button
 import subprocess
 import time
 import socket
