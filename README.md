@@ -15,11 +15,10 @@
 
 **Raspberry pi bread board view**
 ![라즈베리 브레드보드 뷰](bread.png)
-버튼 1 - 상품 인식 + 유통기한 인식
-버튼 2 - 최저가 비교
-버튼 3 - 도움 요청
+- 버튼 1 - 상품 인식 + 유통기한 인식
+- 버튼 2 - 최저가 비교
+- 버튼 3 - 도움 요청
 
----
 
 **Arduino bread board view**
 ![아두이노 브레드보드 뷰](aa.png)
