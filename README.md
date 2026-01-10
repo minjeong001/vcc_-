@@ -9,7 +9,7 @@
 
 ---
 ## 🎯 주요 기능
-**Raspberry pi + Arduino**를 이용한 기능
+### **Raspberry pi + Arduino**를 이용한 기능
  - Raspberry pi를 통해 **상품 인식, 최저가 비교, 도움요청** 기능을 추가
  - Arduino를 이용해 **장애물 감지** 기능을 추가
 
