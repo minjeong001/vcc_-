@@ -439,11 +439,72 @@ while True:
 <details>
 <summary>전체 main 코드</summary>
 
-  여기에 접히는 내용을 작성합니다.
-  여러 줄도 가능하고 마크다운도 쓸 수 있어요.
-
 ```python
-  print("예시 코드")
+ from gpiozero import Button
+import subprocess
+import time
+import socket
+from gtts import gTTS
+import os
+import uuid
+import subprocess
+
+BTN_SCAN = Button(17, pull_up=True, bounce_time=0.3)
+BTN_PRICE = Button(27, pull_up=True, bounce_time=0.3)
+BTN_HELP = Button(22, pull_up=True, bounce_time=0.3)
+
+SERVER_PATH = "/home/서버 경로"
+SERVER_IP = "서버 아이피"
+SERVER_PORT = 5000
+SERVER_URL = f"http://{SERVER_IP}:{SERVER_PORT}"
+
+
+def speak(text):
+    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang='ko')
+    tts.save(filename)
+    subprocess.call(f'mpg123 "{filename}"', shell=True)
+    os.remove(filename)
+
+def is_port_open(ip, port):
+    s = socket.socket()
+    try:
+        s.connect((ip, port))
+        s.close()
+        return True
+    except:
+        return False
+
+if not is_port_open(SERVER_IP, SERVER_PORT):
+    print("서버가 실행 중이 아니므로 시작합니다...")
+    subprocess.Popen(["python3", SERVER_PATH])
+    time.sleep(2)
+else:
+    print("서버가 이미 실행 중입니다.")
+
+print("버튼 대기 중 (17: 상품, 27: 최저가, 22: 도움 요청)")
+
+while True:
+    if BTN_SCAN.is_pressed:
+        print("상품 인식 시작")
+        speak("상품인식을 시작합니다 잠시만 기다려주세요.")
+        subprocess.call(["python3", "/home/상품인식 메인 경로"])
+        time.sleep(1)
+
+    elif BTN_PRICE.is_pressed:
+        print("최저가 비교 시작")
+        speak("최저가 비교를 시작합니다. 잠시만 기다려주세요.")
+        subprocess.call(["python3", "/home/최저가 비교 경로"])
+        time.sleep(1)
+
+    elif BTN_HELP.is_pressed:
+        print("도움 요청 실행 (device1.py)")
+        speak("도움 요청을 보냈습니다. 응답이 올때까지 기다려주세요.")
+        # 도움 요청 디바이스 파일을 백그라운드로 실행
+        subprocess.Popen(["python3", "/home/도움요청 디바이스 경로"])
+        time.sleep(1)
+
+    time.sleep(0.1)
 ```
 </details>
 
