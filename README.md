@@ -429,11 +429,11 @@ while True:
 ```
 </details>
 
-#### Raspberry pi의 메인 코드 (상품 인식 + 최저가 비교 + 도움요청)
+#### **Raspberry pi의 메인 코드** (상품 인식 + 최저가 비교 + 도움요청)
 - 버튼을 통해 원하는 기능을 불러오도록 하는 코드 (호출)
 
 <details>
-<summary>도움 요청 디바이스 (코드)</summary>
+<summary>전체 main 코드</summary>
 
   여기에 접히는 내용을 작성합니다.
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
