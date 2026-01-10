@@ -444,7 +444,61 @@ while True:
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
 ```python
-  print("예시 코드")
+ ＃송신 아두이노 우노 코드
+#include <Wire.h>
+#include <Adafruit_VL53L0X.h>
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+Adafruit_VL53L0X lox = Adafruit_VL53L0X();
+
+// nRF24
+RF24 radio(9, 10);                 // CE, CSN
+const byte address[6] = "00001";
+
+// 최대 거리 (이 이상은 진동 X)
+const int MAX_DISTANCE_MM = 800;   // 80 cm
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("TX START");
+
+  Wire.begin();
+  if (!lox.begin()) {
+    Serial.println("VL53L0X 인식 실패");
+    while (1);
+  }
+  Serial.println("VL53L0X OK");
+
+  radio.begin();
+  radio.openWritingPipe(address);
+  radio.setPALevel(RF24_PA_LOW);
+  radio.stopListening();            // 송신 모드
+}
+
+void loop() {
+  VL53L0X_RangingMeasurementData_t measure;
+  lox.rangingTest(&measure, false);
+
+  if (measure.RangeStatus != 4) {   // 정상 측정
+    int distance = measure.RangeMilliMeter;
+
+    // 너무 먼 값은 컷
+    if (distance > MAX_DISTANCE_MM) {
+      distance = MAX_DISTANCE_MM;
+    }
+
+    radio.write(&distance, sizeof(distance));
+
+    Serial.print("Distance TX: ");
+    Serial.print(distance);
+    Serial.println(" mm");
+  }
+
+  delay(100);
+}
+
 ```
 </details>
 
@@ -455,7 +509,86 @@ while True:
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
 ```python
-  print("예시 코드")
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+#define CE_PIN     9
+#define CSN_PIN    10
+#define MOTOR_PIN  3 // 스위치가 모터에 직접 연결되었으므로 SWITCH_PIN은 사용하지 않습니다.
+
+RF24 radio(CE_PIN, CSN_PIN);
+const byte address[6] = "00001";
+
+const int MIN_DISTANCE = 50;     // 5 cm
+const int MAX_DISTANCE = 800;    // 80 cm
+const unsigned long MIN_INTERVAL = 80;
+const unsigned long MAX_INTERVAL = 600;
+
+unsigned long lastToggleTime = 0;
+unsigned long vibrationInterval = 0;
+
+bool motorState = false;
+
+int currentDistance = MAX_DISTANCE;
+bool hasReceived = false;
+
+void initRadio() {
+
+  if (radio.begin()) {
+    radio.openReadingPipe(0, address);
+    radio.setPALevel(RF24_PA_LOW);
+
+    radio.startListening();
+
+    Serial.println(">>> Radio Initialized & Listening...");
+  } else {
+    Serial.println(">>> Radio Hardware Error!");
+  }
+}
+
+void setup() {
+
+  Serial.begin(9600);
+  pinMode(MOTOR_PIN, OUTPUT);
+  digitalWrite(MOTOR_PIN, LOW);
+
+  initRadio();
+  Serial.println("RX SYSTEM START (Motor Switch Mode)");
+}
+void loop() {
+
+  // 1. 📡 데이터 수신 시도 (항상 작동)
+  if (radio.available()) {
+    radio.read(&currentDistance, sizeof(currentDistance));
+    hasReceived = true;
+
+    if (currentDistance >= MAX_DISTANCE) {
+      vibrationInterval = 0;
+
+    } else {
+      vibrationInterval = map(currentDistance, MIN_DISTANCE, MAX_DISTANCE, MIN_INTERVAL, MAX_INTERVAL);
+      vibrationInterval = constrain(vibrationInterval, MIN_INTERVAL, MAX_INTERVAL);
+    }
+    Serial.print("Dist: "); Serial.print(currentDistance);
+    Serial.print("mm | Inter: "); Serial.println(vibrationInterval);
+  }
+
+  // 2. 🔔 진동 신호 출력 (모터 스위치와 상관없이 아두이노는 신호를 계속 보냄)
+  if (hasReceived && vibrationInterval > 0) {
+    unsigned long now = millis();
+    if (now - lastToggleTime >= vibrationInterval) {
+      lastToggleTime = now;
+      motorState = !motorState;
+      digitalWrite(MOTOR_PIN, motorState);
+    }
+
+  } else {
+    digitalWrite(MOTOR_PIN, LOW);
+    motorState = false;
+  }
+}
+
 ```
 </details>
 
