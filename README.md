@@ -324,7 +324,7 @@ exit(0)
 </details>
 
 <details>
-   <summary> 메인 함수 코드 </summary>
+   <summary> 상품인식 통합 코드 </summary>
 
 ```python
 from gpiozero import Button
