@@ -23,7 +23,7 @@
 	상품 인식 파일, 유통기한 추출 파일, DB 파일 모듈화, main파일에서 스크립트 호출
 	
 <details>
-   <summary> 상품 인식 메인 코드 </summary>
+   <summary> 상품 YOLOv8 인식 관련 코드 </summary>
  
 ```python
 from picamera2 import Picamera2
@@ -413,6 +413,7 @@ while True:
 </details>
 ---
 
+---
 4. ### 🚧 실시간 장애물 감지- 아두이노
     장애물이 카트 앞에 위치할 경우 임계거리를 설정하여 임계거리 안으로 들어오면, 손목밴드의 진동을 이용해 사용자에게 알림. **장애물 거리에 따라 진동 속도를 다르게 하여 위험도**를 표현.
 
@@ -441,6 +442,7 @@ while True:
   print("예시 코드")
 ```
 </details>
+---
 ---
 
 ## 🛠 기술 스택
