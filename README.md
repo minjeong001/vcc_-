@@ -14,7 +14,7 @@
    
    - 라벨링 된 이미지를 이용하여 AI 학습. (Roboflow, Google colab 이용)
    - **YOLOv8 모델**을 통해 상품을 인식.  
-   - **OCR 기술(Pytesseract)**을 활용해 유통기한을 판독하고, **gTTS 음성 안내**로 사용자에게 정보를 제공합.
+   - **OCR 기술**을 활용해 유통기한을 판독하고, **gTTS 음성 안내**로 사용자에게 정보를 제공합.
    - 상품 인식 후 **데이터베이스**에서 가격, 칼로리, 영양 성분 등 정보를 조회하여 **음성으로 출력**.
 
 
@@ -24,7 +24,7 @@
 	
 <details>
    <summary> 상품 YOLOv8 인식 관련 코드 </summary>
- 
+	상품은 라면을 중심으로 (너구리, 짜파게티, 신라면, 진라면, 불닭볶음면) 코드 작성
 ```python
 from picamera2 import Picamera2
 import cv2
