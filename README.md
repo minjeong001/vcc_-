@@ -24,7 +24,9 @@
 	
 <details>
    <summary> 상품 YOLOv8 인식 관련 코드 </summary>
+	
 	상품은 라면을 중심으로 (너구리, 짜파게티, 신라면, 진라면, 불닭볶음면) 코드 작성
+	
 ```python
 from picamera2 import Picamera2
 import cv2
