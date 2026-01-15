@@ -330,7 +330,7 @@ while True:
 
 <details>
 	
-   <summary> 통합 코 </summary>
+   <summary> 통합 코드 </summary>
 	
 ```python
 from gpiozero import Button
