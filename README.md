@@ -328,6 +328,73 @@ while True:
 
 </details>
 
+<details>
+	
+   <summary> 통합 코 </summary>
+	
+```python
+from gpiozero import Button
+import subprocess
+import os
+import time
+import uuid
+import speech_recognition as sr
+from gtts import gTTS
+
+r = sr.Recognizer()
+mic = sr.Microphone(device_index=1)
+
+YES_WORDS = ["예", "네", "응", "그래", "해", "계속"]
+NO_WORDS = ["아니", "아니요", "괜찮아", "그만", "종료", "중지"]
+
+def speak(text):
+    print(text)
+    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang="ko")
+    tts.save(filename)
+    subprocess.call(f'mpg123 -q "{filename}"', shell=True)
+    os.remove(filename)
+    time.sleep(1.0)
+
+def listen_yes_no():
+    with mic as source:
+        r.adjust_for_ambient_noise(source, duration=0.5)
+        try:
+            audio = r.listen(source, timeout=5, phrase_time_limit=5)
+        except:
+            return ""
+    try:
+        text = r.recognize_google(audio, language="ko-KR")
+        print("인식된 음성:", text)
+        return text
+    except:
+        return ""
+
+def run_and_wait(cmd):
+    return subprocess.call(cmd, shell=True)
+
+while True:
+
+    run_and_wait("python3 /home/see2407me/d.py")
+    run_and_wait("python3 /home/see2407me/2.py")
+    run_and_wait("python3 /home/see2407me/tts2.py")
+
+    speak("상품 인식을 계속하시겠습니까? 1초 후에 응 또는 아니라고 말씀해주세요.")
+
+    while True:
+        answer = listen_yes_no()
+
+        if any(word in answer for word in YES_WORDS):
+            speak("상품 인식을 계속 진행합니다.")
+            break
+        elif any(word in answer for word in NO_WORDS):
+            speak("프로그램을 종료합니다.")
+            exit()
+        else:
+            speak("대답을 이해하지 못했습니다. 다시 말씀해 주세요.")
+```
+</details>
+
 ---
 2. ### ➕ 최저가 비교 - Raspberry pi
     상품을 인식하게 되면 그 **상품의 최저가를 네이버 검색**을 통해 검색 후 알려줌.
