@@ -26,7 +26,9 @@
 
 **Arduino bread board view**
 ![아두이노 브레드보드 뷰](aa.png)
+- 송신부
 
+  
 ---
 1. ### 🏷️ 상품 및 유통기한 식별 - Raspberry pi ( 코드 변한거 넣기.)
     카메라에 상품을 인식하면 **AI 학습**을 통해 제품명을 알려주고 실시간으로 **유통기한을 판독**하고 상품과 관련한 **DB**를 통해 사용자에게 제품명, 가격, 유통기한 제공. 필요에 따라 제품에 관한 상세정보도 제공. 동일 카테고리내에서 제품 구별.
@@ -46,13 +48,13 @@
    <summary> 상품 YOLOv8 인식 관련 코드 </summary>
 	
 ```python
+from ultralytics import YOLO
 from picamera2 import Picamera2
 import cv2
 import os
 from gtts import gTTS
 import uuid
 import subprocess
-from ultralytics import YOLO
 
 def speak(text):
     filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
@@ -61,30 +63,25 @@ def speak(text):
     subprocess.call(f'mpg123 "{filename}"', shell=True)
     os.remove(filename)
 
-speak("상품을 카메라 앞에 나둬주세요.")
+speak("상품을 카메라 앞에 나둬주세요.")    
+model = YOLO("/home/see2407me/ramen.pt")
 
-model = YOLO("학습시킨 파일 경로")
-
-output_path = "/home/파일 저장 경로/"
+output_path = "/home/see2407me/result/"
 os.makedirs(output_path, exist_ok=True)
 
 cam = Picamera2()
-cam.configure(
-    cam.create_video_configuration(
-        main={"format": "XRGB8888", "size": (320, 240)}
-    )
-)
+cam.configure(cam.create_video_configuration(main={"format":"XRGB8888","size":(320,240)}))
 cam.start()
 
 label_to_kor = {
-    "shinramen": "신라면",
+    "sinlamen": "신라면",
     "jinramyun": "진라면",
     "nuguri": "너구리",
     "jjapagetti": "짜파게티",
-    "buldakbokkeummyun": "불닭볶음면"
+    "Firechickenboggummyun": "불닭볶음면"
 }
 
-print("인식모드 시작")
+print("라면 인식 모드")
 
 while True:
     frame = cam.capture_array()
@@ -97,14 +94,13 @@ while True:
         cls = int(boxes.cls[0])
         label = model.names[cls]
 
-        kor = label_to_kor.get(label)
+        kor = label_to_kor.get(label, None)
         if kor:
-            with open(os.path.join(output_path, "ramen.txt"), "w") as f:
+            with open(output_path + "ramen.txt", "w") as f:
                 f.write(label)
 
-            print(f"제품 인식됨: {kor}")
+            print(f"라면 인식됨: {kor}")
             break
-
     cv2.waitKey(1)
 
 cam.stop()
@@ -127,7 +123,7 @@ import uuid
 import subprocess
 
 
-output_path = "/home/파일 저장 경로/"
+output_path = "/home/see2407me/result/"
 os.makedirs(output_path, exist_ok=True)
 
 def speak(text):
@@ -138,19 +134,20 @@ def speak(text):
     os.remove(filename)
 
 def extract_date(text):
+    text = text.replace(" ", "").replace("까지", "").replace("유통기한", "").replace("제조", "")
     m = re.search(r"\d{4}\.\d{2}\.\d{2}", text)
     if m:
         return m.group()
     return None
 
-speak("유통기한 인식을 위해 상품을 돌려주세요.")
+speak("유통기한을 인식하기 위해 상품을 돌려주세요.")
 
 cam = Picamera2()
 cam.configure(cam.create_video_configuration(main={"format":"XRGB8888","size":(640,480)}))
 cam.start()
 time.sleep(1)
 
-print("자동 인식 모드 시작")
+print("자동 인식모드 시작")
 
 frame_count = 0
 max_attempts = 100
@@ -166,7 +163,7 @@ while True:
             break
         continue
 
-    print("시도중...")
+    print("시도중..")
     text = pytesseract.image_to_string(frame, lang='kor+eng')
     expiry = extract_date(text)
 
@@ -177,18 +174,18 @@ while True:
         print("유통기한:", expiry)
         break
     else:
-        print("유통기한 인식 실패 : 재시도 중”)
+        print("유통기한 인식 실패 : 재시도 중")
 
     if frame_count > max_attempts:
         speak("유통기한을 찾지 못했습니다. 상품 위치를 조정해주세요.")
-        break
-	
+        frame_count = 0
+        continue
+       
     if cv2.waitKey(1) == ord('q'):
         break
 
 cam.stop()
 cv2.destroyAllWindows()
-
 ```
 </details>
 
@@ -228,52 +225,64 @@ SELECT * FROM ramen_info;  # 내용확인
 ```python
 import sqlite3
 import os
-from gtts import gTTS
 import time
-import speech_recognition as sr
 import uuid
 import subprocess
+import speech_recognition as sr
+from gtts import gTTS
+
+r = sr.Recognizer()
+mic = sr.Microphone(device_index=1)
 
 def speak(text):
+    """텍스트를 TTS로 읽어줌"""
     filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
-    tts = gTTS(text=text, lang='ko')
+    tts = gTTS(text=text, lang="ko")
     tts.save(filename)
-    subprocess.call(f'mpg123 "{filename}"', shell=True)
+    subprocess.call(f'mpg123 -q "{filename}"', shell=True)
     os.remove(filename)
-    time.sleep(0.3)
-
+    time.sleep(1.0)
 
 def format_expiry(expiry):
-    y, m, d = expiry.split('.')
-    return f"{y} 년 {m} 월 {d} 일“
+    """YYYY.MM.DD -> YYYY년 MM월 DD일"""
+    try:
+        y, m, d = expiry.split('.')
+        return f"{y}년 {m}월 {d}일"
+    except:
+        return expiry  # 혹시 포맷이 이상하면 그대로 반환
 
-label_to_kor = {
-    "shinramen": "신라면”,
-    "jinramyun": "진라면“,
-    "nuguri": "너구리”,
-    "jjapagetti": "짜파게티“,
-    "buldakbokkeummyun": "불닭볶음면”
-}
+YES_KEYWORDS = ["예", "네", "응", "줘" ,"그래", "해","알려줘"]
+NO_KEYWORDS = ["아니", "아니요", "괜찮아", "필요없어", "됐어"]
 
 def recognize_yes_no():
-    r = sr.Recognizer()
-    with sr.Microphone(device_index=1) as source:
-        speak("상세 정보를 읽을까요? 네 또는 아니요 라고 말씀해주세요")
+    """음성 인식 후 yes/no/unknown 반환"""
+    with mic as source:
+        r.adjust_for_ambient_noise(source, duration=0.5)
         try:
-            audio = r.listen(source, timeout=5)
-            result = r.recognize_google(audio, language="ko-KR")
-
-            YES_KEYWORDS = {"네", "예", "응", "해주세요"}
-            if any(keyword in result for keyword in YES_KEYWORDS):
-                return "yes"
-            elif "아니요" in result:
-                return "no“
-
+            audio = r.listen(source, timeout=5, phrase_time_limit=5)
         except:
             return "unknown"
-    return "unknown"
 
-with open("/home/텍스트 파일 경로") as f:
+    try:
+        result = r.recognize_google(audio, language="ko-KR")
+        print("인식된 음성:", result)
+        if any(k in result for k in YES_KEYWORDS):
+            return "yes"
+        if any(k in result for k in NO_KEYWORDS):
+            return "no"
+        return "unknown"
+    except:
+        return "unknown"
+
+label_to_kor = {
+    "shinramen": "신라면",
+    "jinramyun": "진라면",
+    "nuguri": "너구리",
+    "jjapagetti": "짜파게티",
+    "buldakbokkeummyun": "불닭볶음면"
+}
+
+with open("/home/see2407me/result/ramen.txt") as f:
     ramen_label = f.read().strip()
 
 kor_name = label_to_kor.get(ramen_label, ramen_label)
@@ -282,7 +291,8 @@ with open("/home/see2407me/result/expiry.txt") as f:
     expiry = f.read().strip()
 
 expiry = format_expiry(expiry)
-conn = sqlite3.connect('/home/DB 경로')
+
+conn = sqlite3.connect("/home/see2407me/ramen.db")
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM ramen_info WHERE name=?", (kor_name,))
 row = cursor.fetchone()
@@ -292,95 +302,28 @@ speak(f"이 제품은 {kor_name}입니다.")
 
 if row:
     _, name, cal, sodium, fat, carb, protein, price = row
-    speak(f”가격은 {price}원 이고, 유통기한은 {expiry}입니다.")
-else:
-    price_text = ""
-time.sleep(1)
+    speak(f"가격은 {price}원이고 유통기한은 {expiry}입니다.")
 
-print("상세 정보 여부 대기중")
-
-answer = recognize_yes_no()
-
-if answer == "yes":
-    if row:
-        info = (
-        f"{name}의 상세정보입니다. "
-        f"열량은 {cal} 킬로칼로리"
-        f"탄수화물 {carb}그램"
-        f"지방 {fat} 그램,"
-        f"나트륨 {sodium}밀리그램"
-        f"단백질 {protein}그램입니다."
-    )
-        speak(info)
-    else:
-        speak("상세정보를 찾을 수 없습니다.")
-elif answer == "no":
-    speak("프로그램을 종료합니다.”)
-else:
-    speak("음성 인식을 실패했습니다. 프로그램을 종료합니다.“)
-
-exit(0)
-```
-</details>
-
-<details>
-   <summary> 상품인식 통합 코드 </summary>
-
-```python
-from gpiozero import Button
-import subprocess
-import os
-import time
-from gtts import gTTS
-import uuid
-
-
-button = Button(17, pull_up=True, bounce_time=0.3)
-
-def speak(text):
-    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
-    tts = gTTS(text=text, lang='ko')
-    tts.save(filename)
-    subprocess.call(f'mpg123 "{filename}"', shell=True)
-    os.remove(filename)
-
-
-def run_and_wait(cmd):
-    return subprocess.call(cmd, shell=True)
-
-first_run = True
+speak("상세 정보를 읽어드릴까요? 1초 후에 응 또는 아니라고 말씀해주세요.")
 
 while True:
+    answer = recognize_yes_no()
 
-    if first_run:
-        print("버튼 누르면 인식 시작.")
-        button.wait_for_press()
-        first_run = False
-
+    if answer == "yes" and row:
+        speak(
+            f"{name}의 상세 정보입니다. "
+            f"열량 {cal}킬로칼로리, "
+            f"탄수화물 {carb}그램, "
+            f"지방 {fat}그램, "
+            f"나트륨 {sodium}밀리그램, "
+            f"단백질 {protein}그램 입니다."
+        )
+        break  # 상세정보 안내 후 루프 종료
+    elif answer == "no":
+        break  # 상세정보 안내 없이 루프 종료
     else:
-        speak("상품 인식을 계속합니다.")
+        speak("대답을 이해하지 못했습니다. 다시 말씀해 주세요.")
 
-    speak("상품 인식을 시작합니다. 잠시만 기다려주세요.")
-
-
-    run_and_wait("python3 /home/상품 인식 코드 경로")
-    run_and_wait("python3 /home/유통기한 추출 코드 경로")
-    run_and_wait("python3 /home/음성 및 DB 코드 경로")
-
-    speak("상품 인식을 계속 하겠습니까? 계속하려면 5초안에 버튼을 눌러주세요.")
-
-    start = time.time()
-    pressed = False
-
-    while time.time() - start < 5:
-        if button.is_pressed:
-            pressed = True
-            break
-        time.sleep(0.1)
-
-    if not pressed:
-        speak("프로그램을 종료합니다.")
-        break
 ```
 
 </details>
@@ -406,7 +349,167 @@ while True:
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
 ```python
-  print("예시 코드")
+  from picamera2 import Picamera2
+from ultralytics import YOLO
+import cv2
+import requests
+import os
+import time
+import uuid
+import subprocess
+import speech_recognition as sr
+from gtts import gTTS
+
+def load_keys():
+    with open("naver_key.txt", "r") as f:
+        lines = f.read().splitlines()
+        return lines[0], lines[1]
+
+CLIENT_ID, CLIENT_SECRET = load_keys()
+
+label_to_kor = {
+    "nuguri": "너구리",
+    "sinlamen": "신라면",
+    "jinramyun": "진라면 매운맛",
+    "jjapagetti": "짜파게티",
+    "Firechickenboggummyun": "불닭볶음면",
+    "_Carbo": "까르보 불닭볶음면",
+    "_Rose": "로제 불닭볶음면"
+}
+
+BULDAK_EXCLUDE = ["로제", "까르보", "치즈", "탕면", "핵"]
+EXCLUDE_KEYWORDS = ["캐릭터", "미니어쳐", "미니어처", "소품", "파츠", "모바일상품권", "모바일쿠폰", "온라인상품권", "온라인쿠폰", "기프티콘", "모형", "피규어", "장난감"]
+
+YES_WORDS = ["예", "에", "네", "응", "그래", "해", "계속", "해줘"]
+NO_WORDS = ["아니", "괜찮아", "됐어", "아니오", "그만", "종료", "중지"]
+
+r = sr.Recognizer()
+mic = sr.Microphone(device_index=1)
+
+def speak(text):
+    print(text)
+    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang="ko")
+    tts.save(filename)
+    subprocess.call(f'mpg123 -q "{filename}"', shell=True)
+    os.remove(filename)
+    time.sleep(0.8)
+
+def listen_yes_no():
+    with mic as source:
+        r.adjust_for_ambient_noise(source, duration=0.4)
+        try:
+            audio = r.listen(source, timeout=5, phrase_time_limit=5)
+        except:
+            return ""
+    try:
+        text = r.recognize_google(audio, language="ko-KR")
+        print("인식된 음성:", text)
+        return text
+    except:
+        return ""
+
+def map_label_to_kor(label):
+    return label_to_kor.get(label)
+
+def search_lowest_price(query, is_buldak):
+    url = "https://openapi.naver.com/v1/search/shop.json"
+    headers = {
+        "X-Naver-Client-Id": CLIENT_ID,
+        "X-Naver-Client-Secret": CLIENT_SECRET
+    }
+    params = {"query": query, "display": 10, "sort": "asc"}
+    res = requests.get(url, headers=headers, params=params)
+    items = res.json().get("items", [])
+    filtered = []
+    for item in items:
+        title = item["title"]
+        if is_buldak and any(x in title for x in BULDAK_EXCLUDE):
+            continue
+        if any(x in title for x in EXCLUDE_KEYWORDS):
+            continue
+        filtered.append(item)
+    return filtered[0] if filtered else None
+
+def detect_ramen(model, frame):
+    if frame.shape[2] == 4:
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2RGB)
+    else:
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    results = model(frame)
+    detected_labels = []
+
+    for r_ in results:
+        for box in r_.boxes:
+            cls_id = int(box.cls[0])
+            label = model.names[cls_id]
+            if label in label_to_kor:
+                detected_labels.append(label)
+
+    for label in detected_labels:
+        if "_Carbo" in label or "_Rose" in label:
+            return label
+
+    if "Firechickenboggummyun" in detected_labels:
+        return "Firechickenboggummyun"
+
+    return detected_labels[0] if detected_labels else None
+
+def run_once(model, picam2):
+    while True:
+        frame = picam2.capture_array()
+        detected = detect_ramen(model, frame)
+        if detected:
+            break
+
+    kor_name = map_label_to_kor(detected)
+    is_buldak = kor_name == "불닭볶음면"
+    query = f"{kor_name} 1봉"
+
+    speak(f"감지된 상품은 {kor_name}입니다.")
+    speak(f"{kor_name}의 최저가를 검색하고 있습니다.")
+
+    item = search_lowest_price(query, is_buldak)
+
+    if item:
+        speak(f"{kor_name}의 최저가는 {item['lprice']}원 입니다.")
+    else:
+        speak("최저가를 찾지 못했습니다.")
+
+speak("상품을 카메라에 비추어 주세요.")
+
+picam2 = Picamera2()
+picam2.configure(picam2.create_preview_configuration(main={"size": (640, 640)}))
+picam2.start()
+
+model = YOLO("ramen.pt")
+
+try:
+    while True:
+        run_once(model, picam2)
+
+        speak("최저가 비교를 계속하시겠습니까? 1초 후에 응 또는 아니라고 말씀해주세요.")
+
+        while True:
+            answer_text = listen_yes_no()
+
+            if any(word in answer_text for word in YES_WORDS):
+                speak("최저가 비교를 계속 진행하겠습니다. 원하시는 상품을 비춰주세요.")
+                break
+
+            if any(word in answer_text for word in NO_WORDS):
+                speak("최저가 비교를 종료합니다.")
+                raise KeyboardInterrupt
+
+            speak("대답을 이해하지 못했습니다. 다시 말씀해주세요.")
+            time.sleep(0.5)
+
+except KeyboardInterrupt:
+    pass
+finally:
+    picam2.stop()
+    del picam2
 ```
 </details>
 
@@ -425,7 +528,276 @@ while True:
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
 ```python
-  print("예시 코드")
+  from flask import Flask, request, redirect, render_template_string, Response
+import requests
+from datetime import datetime
+import time
+
+app = Flask(__name__)
+
+devices = {}
+history = []
+clients = []
+
+REASONS = [
+    "마트에서 이동 도움",
+    "상품 선택 도움",
+    "결제 도움",
+    "카트 넘어짐",
+    "오작동",
+    "기타"
+]
+
+def elapsed_time_str(start_time, end_time=None):
+    if end_time is None:
+        delta = datetime.now() - start_time
+    else:
+        delta = end_time - start_time
+    s = int(delta.total_seconds())
+    if s < 60:
+        return f"{s}초"
+    elif s < 3600:
+        return f"{s//60}분 {s%60}초"
+    else:
+        return f"{s//3600}시간 {(s%3600)//60}분"
+
+@app.route("/events")
+def sse():
+    def gen():
+        q = []
+        clients.append(q)
+        try:
+            while True:
+                if q:
+                    msg = q.pop(0)
+                    yield f"data: {msg}\n\n"
+                else:
+                    time.sleep(0.5)
+        except GeneratorExit:
+            clients.remove(q)
+    return Response(gen(), mimetype="text/event-stream")
+
+@app.route("/")
+def index():
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>긴급 요청 모니터</title>
+<meta http-equiv="refresh" content="15">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: sans-serif; background:#f4f6f8; margin:0; padding:16px; }
+h1 { margin-bottom: 10px; }
+.card { background:#fff; border-radius:12px; padding:16px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; }
+.badge-new { color:white; background:#d32f2f; padding:4px 10px; border-radius:12px; }
+.badge-move { color:white; background:#f57c00; padding:4px 10px; border-radius:12px; }
+.btn { display:inline-block; padding:8px 12px; border-radius:6px; color:white; text-decoration:none; margin-right:6px; }
+.view { background:#1976d2; }
+.move { background:#f57c00; }
+.clear { background:#d32f2f; }
+.history { background:#eceff1; padding:10px; margin-bottom:10px; border-radius:10px; position:relative; }
+.history .delete, .history .edit-btn { position:absolute; right:10px; top:10px; background:#d32f2f; color:white; border:none; padding:3px 6px; border-radius:4px; cursor:pointer; margin-left:4px;}
+.history .edit-btn { background:#1976d2; right:60px; }
+form { margin:0; }
+select, input[type=text] { margin-top:4px; padding:4px 6px; width:200px; border-radius:4px; border:1px solid #ccc; }
+</style>
+
+<script>
+const evtSource = new EventSource("/events");
+evtSource.onmessage = function(event) {
+    location.reload();
+};
+function showReasonForm(deviceId) {
+    document.getElementById('reason-form-' + deviceId).style.display = 'block';
+}
+function toggleOtherInput(sel) {
+    const otherInput = sel.parentNode.querySelector('input[name="other_reason"]');
+    if(sel.value == '기타') otherInput.style.display='inline-block';
+    else otherInput.style.display='none';
+}
+function showEditForm(idx) {
+    document.getElementById('edit-form-' + idx).style.display = 'block';
+}
+</script>
+</head>
+<body>
+
+<h1>긴급 요청 모니터</h1>
+
+{% for id, d in devices.items() %}
+<div class="card">
+<b>{{ id }}</b>
+<span class="{{ 'badge-new' if d.status=='NEW' else 'badge-move' }}">{{ d.status }}</span><br>
+요청 시간: {{ d.time_str }}<br>
+경과 시간: {{ d.elapsed }}<br>
+요청 사유: {{ d.reason }}<br><br>
+
+<a class="btn view" href="/device/{{ id }}">화면 보기</a>
+<a class="btn move" href="/move/{{ id }}">직원 이동</a>
+<a class="btn clear" href="javascript:void(0)" onclick="showReasonForm('{{ id }}')">종료</a>
+
+<div id="reason-form-{{ id }}" style="display:none; margin-top:8px;">
+<form action="/clear/{{ id }}" method="post">
+<select name="reason" onchange="toggleOtherInput(this)">
+{% for r in reasons %}
+<option value="{{ r }}">{{ r }}</option>
+{% endfor %}
+</select>
+<input type="text" name="other_reason" placeholder="직접 입력" style="display:none;">
+<input type="submit" value="확인">
+</form>
+</div>
+</div>
+{% else %}
+<p>현재 요청이 없습니다.</p>
+{% endfor %}
+
+<hr>
+
+<h1>요청 기록</h1>
+{% for idx, h in enumerate(history) %}
+<div class="history">
+<b>{{ h.device_id }}</b><br>
+시작 시간: {{ h.start_time }}<br>
+종료 시간: {{ h.end_time }}<br>
+소요 시간: {{ h.duration }}<br>
+사유: {{ h.reason }}
+
+<form action="/delete_history/{{ idx }}" method="post" style="display:inline;">
+<button class="delete">삭제</button>
+</form>
+
+<button class="edit-btn" onclick="showEditForm({{ idx }})">수정</button>
+
+<div id="edit-form-{{ idx }}" style="display:none; margin-top:4px;">
+<form action="/edit_reason/{{ idx }}" method="post">
+<select name="reason" onchange="toggleOtherInput(this)">
+{% for r in reasons %}
+<option value="{{ r }}" {% if r==h.reason %}selected{% endif %}>{{ r }}</option>
+{% endfor %}
+</select>
+<input type="text" name="other_reason" value="{% if h.reason not in reasons %}{{ h.reason }}{% endif %}">
+<input type="submit" value="확인">
+</form>
+</div>
+
+</div>
+{% else %}
+<p>요청 기록이 없습니다.</p>
+{% endfor %}
+
+</body>
+</html>
+""",
+devices={k: {
+    **v,
+    "elapsed": elapsed_time_str(v["time"]),
+    "time_str": v["time"].strftime("%Y-%m-%d %H:%M:%S")
+} for k,v in devices.items()},
+history=history,
+reasons=REASONS,
+enumerate=enumerate
+)
+
+@app.route("/device/<device_id>")
+def view_device(device_id):
+    d = devices.get(device_id)
+    if not d:
+        return "해당 장치를 찾을 수 없습니다.", 404
+    return f"""
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="background:black;color:white;text-align:center">
+<h2>{device_id} 요청 화면</h2>
+<iframe src="{d['stream_url']}" width="720" height="540"></iframe><br><br>
+<a href="/" style="color:white">← 돌아가기</a>
+</body>
+</html>
+"""
+
+@app.route("/emergency", methods=["POST"])
+def emergency():
+    data = request.get_json(silent=True)
+    if not data:
+        return "Invalid JSON", 400
+
+    device_id = str(data.get("device_id"))
+    stream_url = str(data.get("stream_url"))
+    reason = str(data.get("reason", "기타"))
+
+    devices[device_id] = {
+        "stream_url": stream_url,
+        "status": "NEW",
+        "time": datetime.now(),
+        "reason": reason
+    }
+    for q in clients:
+        q.append("update")
+
+    return "OK", 200
+
+
+@app.route("/move/<device_id>")
+def move_staff(device_id):
+    d = devices.get(device_id)
+    if not d:
+        return "Not found", 404
+    try:
+        requests.get(d["stream_url"] + "/staff_moving", timeout=2)
+    except:
+        pass
+    d["status"] = "MOVING"
+    return redirect("/")
+
+@app.route("/clear/<device_id>", methods=["POST"])
+def clear(device_id):
+    d = devices.get(device_id)
+    if d:
+        try:
+            requests.get(d["stream_url"] + "/stop", timeout=1)
+        except:
+            pass
+
+        reason = request.form.get("reason")
+        other_reason = request.form.get("other_reason")
+
+        if reason == "기타" and other_reason.strip():
+            reason = other_reason.strip()
+
+        end_time = datetime.now()
+
+        history.insert(0, {
+            "device_id": device_id,
+            "start_time": d["time"].strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "duration": elapsed_time_str(d["time"], end_time),
+            "reason": reason
+        })
+
+        devices.pop(device_id, None)
+
+    return redirect("/")
+
+@app.route("/edit_reason/<int:idx>", methods=["POST"])
+def edit_reason(idx):
+    if 0 <= idx < len(history):
+        reason = request.form.get("reason")
+        other_reason = request.form.get("other_reason")
+        if reason == "기타" and other_reason.strip():
+            reason = other_reason.strip()
+        history[idx]["reason"] = reason
+    return redirect("/")
+
+@app.route("/delete_history/<int:idx>", methods=["POST"])
+def delete_history(idx):
+    if 0 <= idx < len(history):
+        history.pop(idx)
+    return redirect("/")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=False)
 ```
 </details>
 
@@ -436,7 +808,205 @@ while True:
   여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
 ```python
-  print("예시 코드")
+
+import io
+import threading
+import requests
+import socketserver
+import os
+import time
+from threading import Condition
+from http import server
+import speech_recognition as sr
+
+from picamera2 import Picamera2
+from PIL import Image
+
+# 🔊 TTS
+from gtts import gTTS
+from pygame import mixer
+
+DEVICE_ID = "CAM_01"
+DEVICE_IP = "172.20.10.4"
+CENTRAL_SERVER = "http://172.20.10.4:5000"
+STREAM_PORT = 8000
+
+def speak(text):
+    try:
+        print("🔊 TTS:", text)
+        tts = gTTS(text=text, lang="ko")
+        filename = "tts.mp3"
+        tts.save(filename)
+
+        mixer.init()
+        mixer.music.load(filename)
+        mixer.music.play()
+
+        while mixer.music.get_busy():
+            time.sleep(0.1)
+
+        mixer.quit()
+        os.remove(filename)
+
+    except Exception as e:
+        print("⚠️ TTS 오류:", e)
+
+
+def recognize_speech():
+    r = sr.Recognizer()
+
+    # 🔹 음성 인식 시작 전 안내 멘트
+    speak("요청 사항을 1초 뒤에 말씀해 주시면 신속하게 대응해드리겠습니다.")
+
+    with sr.Microphone() as source:
+        print("말하세요")
+        try:
+            audio = r.listen(source, timeout=5)
+        except sr.WaitTimeoutError:
+            print("⚠️ 음성이 감지되지 않았습니다.")
+            return None
+
+    try:
+        text = r.recognize_google(audio, language="ko-KR")
+        print("인식 결과:", text)
+        return text
+    except:
+        print("⚠️ 음성 인식 실패")
+        return None
+
+HTML_PAGE = """
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Camera Stream</title>
+</head>
+<body style="background:black;color:white;text-align:center">
+<h1>요청자 실시간 영상</h1>
+<img src="stream.mjpg" width="640" height="480">
+</body>
+</html>
+"""
+
+class StreamingOutput:
+    def __init__(self):
+        self.frame = None
+        self.condition = Condition()
+
+    def write(self, data):
+        with self.condition:
+            self.frame = data
+            self.condition.notify_all()
+
+class StreamingHandler(server.BaseHTTPRequestHandler):
+    def do_GET(self):
+
+        if self.path == "/stop":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"STOP")
+            print("STOP received. Exiting.")
+            os._exit(0)
+            return
+
+        if self.path == "/staff_moving":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"STAFF MOVING")
+            print("Staff is on the way")
+
+            # 🔹 직원 이동 중 음성 안내 (스트리밍 끊김 방지용 스레드)
+            threading.Thread(
+                target=speak,
+                args=("직원이 이동 중입니다. 잠시만 기다려 주세요.",),
+                daemon=True
+            ).start()
+            return
+
+        if self.path in ("/", "/index.html"):
+            content = HTML_PAGE.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", len(content))
+            self.end_headers()
+            self.wfile.write(content)
+            return
+
+        if self.path == "/stream.mjpg":
+            self.send_response(200)
+            self.send_header(
+                "Content-Type",
+                "multipart/x-mixed-replace; boundary=FRAME"
+            )
+            self.end_headers()
+            try:
+                while True:
+                    with output.condition:
+                        output.condition.wait()
+                        frame = output.frame
+
+                    self.wfile.write(b"--FRAME\r\n")
+                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Length", len(frame))
+                    self.end_headers()
+                    self.wfile.write(frame)
+                    self.wfile.write(b"\r\n")
+            except Exception:
+                pass
+            return
+
+        self.send_error(404)
+
+class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
+picam2 = Picamera2()
+
+config = picam2.create_video_configuration(
+    main={
+        "size": (640, 480),
+        "format": "RGB888"
+    }
+)
+
+picam2.configure(config)
+picam2.set_controls({"AwbEnable": True})
+picam2.start()
+
+output = StreamingOutput()
+
+def capture_loop():
+    while True:
+        frame = picam2.capture_array()
+        frame = frame[:, :, ::-1]
+        image = Image.fromarray(frame, "RGB")
+        buf = io.BytesIO()
+        image.save(buf, format="JPEG")
+        output.write(buf.getvalue())
+
+def register_device():
+    reason_text = recognize_speech()
+
+    data = {
+        "device_id": DEVICE_ID,
+        "stream_url": "http://" + DEVICE_IP + ":" + str(STREAM_PORT),
+        "reason": reason_text if reason_text else "음성 인식 실패"
+    }
+
+    print("서버로 전송:", data)
+    requests.post(CENTRAL_SERVER + "/emergency", json=data)
+
+
+if __name__ == "__main__":
+    threading.Thread(target=capture_loop, daemon=True).start()
+    register_device()
+
+    server = StreamingServer(("", STREAM_PORT), StreamingHandler)
+    print("Streaming started on port", STREAM_PORT)
+    server.serve_forever()
+
 ```
 </details>
 
@@ -451,31 +1021,30 @@ from gpiozero import Button
 import subprocess
 import time
 import socket
-from gtts import gTTS
+import threading
 import os
 import uuid
-import subprocess
+import signal
+from signal import pause
+from gtts import gTTS
+import board
+import busio
+import adafruit_bno055
 
-BTN_SCAN = Button(17, pull_up=True, bounce_time=0.3)
+
+BTN_SCAN  = Button(17, pull_up=True, bounce_time=0.3)
 BTN_PRICE = Button(27, pull_up=True, bounce_time=0.3)
-BTN_HELP = Button(22, pull_up=True, bounce_time=0.3)
+BTN_HELP  = Button(22, pull_up=True, bounce_time=0.3)
 
-SERVER_PATH = "/home/서버 경로"
-SERVER_IP = "서버 아이피"
+
+SERVER_PATH = "/home/see2407me/server.py"
+SERVER_IP = "172.20.10.4"
 SERVER_PORT = 5000
-SERVER_URL = f"http://{SERVER_IP}:{SERVER_PORT}"
-
-
-def speak(text):
-    filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
-    tts = gTTS(text=text, lang='ko')
-    tts.save(filename)
-    subprocess.call(f'mpg123 "{filename}"', shell=True)
-    os.remove(filename)
 
 def is_port_open(ip, port):
-    s = socket.socket()
     try:
+        s = socket.socket()
+        s.settimeout(1)
         s.connect((ip, port))
         s.close()
         return True
@@ -483,35 +1052,171 @@ def is_port_open(ip, port):
         return False
 
 if not is_port_open(SERVER_IP, SERVER_PORT):
-    print("서버가 실행 중이 아니므로 시작합니다...")
-    subprocess.Popen(["python3", SERVER_PATH])
-    time.sleep(2)
-else:
-    print("서버가 이미 실행 중입니다.")
+    print("🚀 서버 확인 중...")
+    try:
+        subprocess.Popen(["python3", SERVER_PATH])
+        time.sleep(2)
+    except:
+        pass
 
-print("버튼 대기 중 (17: 상품, 27: 최저가, 22: 도움 요청)")
 
-while True:
-    if BTN_SCAN.is_pressed:
-        print("상품 인식 시작")
-        speak("상품인식을 시작합니다 잠시만 기다려주세요.")
-        subprocess.call(["python3", "/home/상품인식 메인 경로"])
-        time.sleep(1)
+def speak(text):
+    def _speak(text):
+        try:
+            filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
+            gTTS(text=text, lang="ko").save(filename)
+            subprocess.run(["mpg123", "-q", filename], check=True)
+            if os.path.exists(filename):
+                os.remove(filename)
+        except Exception as e:
+            print(f"TTS Error: {e}")
+    threading.Thread(target=_speak, args=(text,), daemon=True).start()
 
-    elif BTN_PRICE.is_pressed:
-        print("최저가 비교 시작")
-        speak("최저가 비교를 시작합니다. 잠시만 기다려주세요.")
-        subprocess.call(["python3", "/home/최저가 비교 경로"])
-        time.sleep(1)
 
-    elif BTN_HELP.is_pressed:
-        print("도움 요청 실행 (device1.py)")
-        speak("도움 요청을 보냈습니다. 응답이 올때까지 기다려주세요.")
-        # 도움 요청 디바이스 파일을 백그라운드로 실행
-        subprocess.Popen(["python3", "/home/도움요청 디바이스 경로"])
-        time.sleep(1)
+def init_imu():
+    try:
+        i2c = busio.I2C(board.SCL, board.SDA)
+        sensor = adafruit_bno055.BNO055_I2C(i2c)
+        print("✅ IMU 센서 연결 성공")
+        return sensor
+    except Exception as e:
+        print(f"⚠️ IMU 센서 연결 실패: {e}")
+        return None
 
-    time.sleep(0.1)
+imu = init_imu()
+
+TILT_THRESHOLD = 9.65
+RECOVER_THRESHOLD = 3.0
+tilt_active = False
+fall_event = threading.Event()
+
+
+FALL_ALERT_FILE = "/tmp/fall_alert.flag"
+
+# 초기 상태: 파일 있으면 활성, 없으면 비활성
+if not os.path.exists(FALL_ALERT_FILE):
+    with open(FALL_ALERT_FILE, "w") as f:
+        f.write("1")
+
+def check_fall_alert():
+    return os.path.exists(FALL_ALERT_FILE)
+
+def reset_fall_alert():
+    with open(FALL_ALERT_FILE, "w") as f:
+        f.write("1")
+    print("✅ IMU 알람 다시 활성화")
+
+
+current_process = None
+process_lock = threading.Lock()
+
+def kill_current_process_and_wait():
+    global current_process
+    with process_lock:
+        if current_process and current_process.poll() is None:
+            print("⛔ 기존 작업 종료 및 카메라 해제 중...")
+            try:
+                pgid = os.getpgid(current_process.pid)
+                os.killpg(pgid, signal.SIGTERM)
+                for _ in range(20):
+                    if current_process.poll() is not None:
+                        break
+                    time.sleep(1.1)
+                if current_process.poll() is None:
+                    os.killpg(pgid, signal.SIGKILL)
+                    current_process.wait()
+            except ProcessLookupError:
+                pass
+            current_process = None
+    time.sleep(2.0)
+
+def run_process(path, voice=None):
+    kill_current_process_and_wait()
+    if voice:
+        speak(voice)
+    global current_process
+    with process_lock:
+        try:
+            current_process = subprocess.Popen(
+                ["python3", path],
+                preexec_fn=os.setsid
+            )
+        except Exception as e:
+            print(f"실행 실패: {e}")
+
+def run_manual_help():
+    run_process("/home/see2407me/device.py", "도움 요청을 보냈습니다.")
+
+def run_fall_help_safe():
+    print("🚨 [넘어짐 감지] 도움 요청 시작")
+   
+    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
+    if os.path.exists(FALL_ALERT_FILE):
+        os.remove(FALL_ALERT_FILE)
+   
+    kill_current_process_and_wait()
+    speak("카트가 넘어졌습니다. 도움을 요청합니다.")
+    time.sleep(2.0)
+   
+    try:
+        # 🔥 blocking call: device2.py 종료될 때까지 기다림
+        subprocess.call(["python3", "/home/see2407me/device2.py"])
+    except Exception as e:
+        print(f"도움 요청 코드 실행 실패: {e}")
+   
+    # 종료 후 플래그 복원 → IMU 재감지 가능
+    reset_fall_alert()
+
+def imu_watch_loop():
+    global tilt_active, imu
+    consecutive_none = 0
+    while True:
+        fall_alert_active = check_fall_alert()  # 매 루프마다 상태 확인
+
+        if imu is None:
+            imu = init_imu()
+            if imu is None:
+                time.sleep(5)
+                continue
+        try:
+            gravity = imu.gravity
+            if gravity and gravity[1] is not None:
+                gy = gravity[1]
+                consecutive_none = 0
+
+                if abs(gy) > TILT_THRESHOLD and not tilt_active and fall_alert_active:
+                    tilt_active = True
+                    fall_event.set()
+                elif abs(gy) < RECOVER_THRESHOLD:
+                    tilt_active = False
+            else:
+                consecutive_none += 1
+                if consecutive_none > 3:
+                    imu = None
+        except:
+            imu = None
+        time.sleep(0.2)
+
+def fall_handler_loop():
+    while True:
+        fall_event.wait()
+        fall_event.clear()
+        run_fall_help_safe()
+
+BTN_SCAN.when_pressed  = lambda: run_process("/home/see2407me/text4.py", "상품 인식을 시작합니다.")
+BTN_PRICE.when_pressed = lambda: run_process("/home/see2407me/price8.py", "최저가 비교를 시작합니다.")
+BTN_HELP.when_pressed  = run_manual_help
+
+if __name__ == "__main__":
+    print("✅ 카트 시스템 가동 중...")
+    threading.Thread(target=imu_watch_loop, daemon=True).start()
+    threading.Thread(target=fall_handler_loop, daemon=True).start()
+    try:
+        pause()  # 버튼 이벤트 및 스레드 계속 유지
+    except KeyboardInterrupt:
+        kill_current_process_and_wait()
+        print("\n👋 시스템 종료")
+
 ```
 </details>
 
