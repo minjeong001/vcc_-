@@ -64,9 +64,9 @@ def speak(text):
     os.remove(filename)
 
 speak("상품을 카메라 앞에 나둬주세요.")    
-model = YOLO("/home/see2407me/ramen.pt")
+model = YOLO("/home/학습 pt 파일 경로")
 
-output_path = "/home/see2407me/result/"
+output_path = "/home/결과 저장 경로"
 os.makedirs(output_path, exist_ok=True)
 
 cam = Picamera2()
@@ -123,7 +123,7 @@ import uuid
 import subprocess
 
 
-output_path = "/home/see2407me/result/"
+output_path = "/home/결과 저장 경로로"
 os.makedirs(output_path, exist_ok=True)
 
 def speak(text):
@@ -282,17 +282,17 @@ label_to_kor = {
     "buldakbokkeummyun": "불닭볶음면"
 }
 
-with open("/home/see2407me/result/ramen.txt") as f:
+with open("/home/상품 txt파일 경로") as f:
     ramen_label = f.read().strip()
 
 kor_name = label_to_kor.get(ramen_label, ramen_label)
 
-with open("/home/see2407me/result/expiry.txt") as f:
+with open("/home/파일 경로") as f:
     expiry = f.read().strip()
 
 expiry = format_expiry(expiry)
 
-conn = sqlite3.connect("/home/see2407me/ramen.db")
+conn = sqlite3.connect("/home/생성한 DB경로로")
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM ramen_info WHERE name=?", (kor_name,))
 row = cursor.fetchone()
@@ -344,7 +344,7 @@ from gtts import gTTS
 r = sr.Recognizer()
 mic = sr.Microphone(device_index=1)
 
-YES_WORDS = ["예", "네", "응", "그래", "해", "계속"]
+YES_WORDS = ["예", "네", "응", "그래", "해", "계속","줘줘"]
 NO_WORDS = ["아니", "아니요", "괜찮아", "그만", "종료", "중지"]
 
 def speak(text):
@@ -375,9 +375,9 @@ def run_and_wait(cmd):
 
 while True:
 
-    run_and_wait("python3 /home/see2407me/d.py")
-    run_and_wait("python3 /home/see2407me/2.py")
-    run_and_wait("python3 /home/see2407me/tts2.py")
+    run_and_wait("python3 /home/상품 인식 파일")
+    run_and_wait("python3 /home/유통기한 추출 파일.py")
+    run_and_wait("python3 /home/tts파일.py")
 
     speak("상품 인식을 계속하시겠습니까? 1초 후에 응 또는 아니라고 말씀해주세요.")
 
@@ -411,9 +411,6 @@ while True:
     
 <details>
 <summary> 최저가 검색(코드)</summary>
-
-  여기에 접히는 내용을 작성합니다.
-  여러 줄도 가능하고 마크다운도 쓸 수 있어요.
 
 ```python
   from picamera2 import Picamera2
@@ -870,9 +867,7 @@ if __name__ == "__main__":
 
 <details>
 <summary>도움 요청 디바이스 (코드)</summary>
-
-  여기에 접히는 내용을 작성합니다.
-  여러 줄도 가능하고 마크다운도 쓸 수 있어요.
+ 서버를 이용해서 도움 요청을 확인
 
 ```python
 
@@ -894,8 +889,8 @@ from gtts import gTTS
 from pygame import mixer
 
 DEVICE_ID = "CAM_01"
-DEVICE_IP = "172.20.10.4"
-CENTRAL_SERVER = "http://172.20.10.4:5000"
+DEVICE_IP = "라즈베리파이 IP"
+CENTRAL_SERVER = "http://라즈베리파이 IP:5000"
 STREAM_PORT = 8000
 
 def speak(text):
@@ -1104,8 +1099,8 @@ BTN_PRICE = Button(27, pull_up=True, bounce_time=0.3)
 BTN_HELP  = Button(22, pull_up=True, bounce_time=0.3)
 
 
-SERVER_PATH = "/home/see2407me/server.py"
-SERVER_IP = "172.20.10.4"
+SERVER_PATH = "/home/서버 파일"
+SERVER_IP = "라즈베리 IP"
 SERVER_PORT = 5000
 
 def is_port_open(ip, port):
@@ -1212,7 +1207,7 @@ def run_process(path, voice=None):
             print(f"실행 실패: {e}")
 
 def run_manual_help():
-    run_process("/home/see2407me/device.py", "도움 요청을 보냈습니다.")
+    run_process("/home/도움요청 디바이스 파일", "도움 요청을 보냈습니다.")
 
 def run_fall_help_safe():
     print("🚨 [넘어짐 감지] 도움 요청 시작")
@@ -1227,7 +1222,7 @@ def run_fall_help_safe():
    
     try:
         # 🔥 blocking call: device2.py 종료될 때까지 기다림
-        subprocess.call(["python3", "/home/see2407me/device2.py"])
+        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])
     except Exception as e:
         print(f"도움 요청 코드 실행 실패: {e}")
    
@@ -1270,8 +1265,8 @@ def fall_handler_loop():
         fall_event.clear()
         run_fall_help_safe()
 
-BTN_SCAN.when_pressed  = lambda: run_process("/home/see2407me/text4.py", "상품 인식을 시작합니다.")
-BTN_PRICE.when_pressed = lambda: run_process("/home/see2407me/price8.py", "최저가 비교를 시작합니다.")
+BTN_SCAN.when_pressed  = lambda: run_process("/home/상품인식 통합 파일", "상품 인식을 시작합니다.")
+BTN_PRICE.when_pressed = lambda: run_process("/home/최저가 비교 파일", "최저가 비교를 시작합니다.")
 BTN_HELP.when_pressed  = run_manual_help
 
 if __name__ == "__main__":
