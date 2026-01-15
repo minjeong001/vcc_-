@@ -1094,9 +1094,7 @@ fall_event = threading.Event()
 
 
 FALL_ALERT_FILE = "/tmp/fall_alert.flag"
-
-# 초기 상태: 파일 있으면 활성, 없으면 비활성
-if not os.path.exists(FALL_ALERT_FILE):
+if not os.path.exists(FALL_ALERT_FILE): # 초기 상태: 파일 있으면 활성, 없으면 비활성
     with open(FALL_ALERT_FILE, "w") as f:
         f.write("1")
 
@@ -1116,9 +1114,8 @@ process_lock = threading.Lock()
 .
 def run_fall_help_safe():
     print("🚨 [넘어짐 감지] 도움 요청 시작")
-   
-    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
-    if os.path.exists(FALL_ALERT_FILE):
+
+    if os.path.exists(FALL_ALERT_FILE):    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
         os.remove(FALL_ALERT_FILE)
    
     kill_current_process_and_wait()
@@ -1126,13 +1123,12 @@ def run_fall_help_safe():
     time.sleep(2.0)
    
     try:
-        # 🔥 blocking call: device2.py 종료될 때까지 기다림
-        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])
+        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])   # 🔥 blocking call: device2.py 종료될 때까지 기다림
     except Exception as e:
         print(f"도움 요청 코드 실행 실패: {e}")
    
-    # 종료 후 플래그 복원 → IMU 재감지 가능
-    reset_fall_alert()
+
+    reset_fall_alert()    # 종료 후 플래그 복원 → IMU 재감지 가능
 ```
 </details>
 
@@ -1140,6 +1136,142 @@ def run_fall_help_safe():
 <summary>카트 넘어짐에 대한 디바이스 코드</summary>
 
 ```python
+import io
+import threading
+import requests
+import socketserver
+import os
+from threading import Condition
+from http import server
+
+from picamera2 import Picamera2
+from PIL import Image
+
+DEVICE_ID = "CAM_01"
+DEVICE_IP = "라즈베리파이 IP"
+CENTRAL_SERVER = "http://라즈베리파이 IP:5000"
+STREAM_PORT = 8000
+
+
+HTML_PAGE = """
+<html>
+<head><title>Camera Stream</title></head>
+<body style="background:black;color:white;text-align:center">
+<h1>EMERGENCY ACTIVE</h1>
+<img src="stream.mjpg" width="640" height="480">
+</body>
+</html>
+"""
+
+class StreamingOutput:
+    def __init__(self):
+        self.frame = None
+        self.condition = Condition()
+
+    def write(self, data):
+        with self.condition:
+            self.frame = data
+            self.condition.notify_all()
+
+
+class StreamingHandler(server.BaseHTTPRequestHandler):
+    def do_GET(self):
+
+
+        if self.path == "/stop":         # 🔴종료 요청 (직원 도착)
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"STOP")
+            print("STOP received. Exiting.")
+            os._exit(0)   # ❗ 사유 전송 없이 그냥 종료
+
+
+        if self.path in ("/", "/index.html"):        # 메인 페이지
+            content = HTML_PAGE.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", len(content))
+            self.end_headers()
+            self.wfile.write(content)
+            return
+
+        if self.path == "/stream.mjpg":
+            self.send_response(200)
+            self.send_header(
+                "Content-Type",
+                "multipart/x-mixed-replace; boundary=FRAME"
+            )
+            self.end_headers()
+
+            try:
+                while True:
+                    with output.condition:
+                        output.condition.wait()
+                        frame = output.frame
+
+                    self.wfile.write(b"--FRAME\r\n")
+                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Length", len(frame))
+                    self.end_headers()
+                    self.wfile.write(frame)
+                    self.wfile.write(b"\r\n")
+
+            except Exception:
+                pass
+
+            return
+
+        self.send_error(404)
+
+
+class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+picam2 = Picamera2()
+
+config = picam2.create_video_configuration(
+    main={"size": (640, 480), "format": "RGB888"}
+)
+
+picam2.configure(config)
+picam2.start()
+
+output = StreamingOutput()
+
+def capture_loop():
+    while True:
+        frame = picam2.capture_array()
+
+     
+        frame = frame[:, :, ::-1]   # 색상 보정 (파란 화면 방지 핵심)
+
+        image = Image.fromarray(frame, "RGB")
+        buf = io.BytesIO()
+        image.save(buf, format="JPEG")
+        output.write(buf.getvalue())
+
+
+def register_device():
+    data = {
+        "device_id": DEVICE_ID,
+        "stream_url": f"http://{DEVICE_IP}:{STREAM_PORT}",
+        "reason": "카트 넘어짐"
+    }
+    print("Sending emergency:", data)
+    requests.post(CENTRAL_SERVER + "/emergency", json=data)
+
+if __name__ == "__main__":
+
+ 
+    threading.Thread(target=capture_loop, daemon=True).start()   # 카메라 캡처 스레드
+
+ 
+    register_device()  # 시작 시 1회만 서버에 알림
+
+    server = StreamingServer(("", STREAM_PORT), StreamingHandler)    # 스트리밍 서버 시작
+    print("Streaming started on port", STREAM_PORT)
+    server.serve_forever()
 
 ```
 </details>
@@ -1227,9 +1359,7 @@ fall_event = threading.Event()
 
 
 FALL_ALERT_FILE = "/tmp/fall_alert.flag"
-
-# 초기 상태: 파일 있으면 활성, 없으면 비활성
-if not os.path.exists(FALL_ALERT_FILE):
+if not os.path.exists(FALL_ALERT_FILE):  # 초기 상태: 파일 있으면 활성, 없으면 비활성
     with open(FALL_ALERT_FILE, "w") as f:
         f.write("1")
 
@@ -1284,23 +1414,18 @@ def run_manual_help():
 
 def run_fall_help_safe():
     print("🚨 [넘어짐 감지] 도움 요청 시작")
-   
-    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
-    if os.path.exists(FALL_ALERT_FILE):
+    if os.path.exists(FALL_ALERT_FILE):    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
         os.remove(FALL_ALERT_FILE)
    
     kill_current_process_and_wait()
     speak("카트가 넘어졌습니다. 도움을 요청합니다.")
     time.sleep(2.0)
    
-    try:
-        # 🔥 blocking call: device2.py 종료될 때까지 기다림
-        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])
+    try: 
+        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])   # 🔥 blocking call: device2.py 종료될 때까지 기다림
     except Exception as e:
         print(f"도움 요청 코드 실행 실패: {e}")
-   
-    # 종료 후 플래그 복원 → IMU 재감지 가능
-    reset_fall_alert()
+    reset_fall_alert()   # 종료 후 플래그 복원 → IMU 재감지 가능
 
 def imu_watch_loop():
     global tilt_active, imu
