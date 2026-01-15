@@ -1085,6 +1085,54 @@ if __name__ == "__main__":
 <summary>메인 코드에 있는 기울기 감지 코드</summary>
 
 ```python
+imu = init_imu()
+
+TILT_THRESHOLD = 9.65
+RECOVER_THRESHOLD = 3.0
+tilt_active = False
+fall_event = threading.Event()
+
+
+FALL_ALERT_FILE = "/tmp/fall_alert.flag"
+
+# 초기 상태: 파일 있으면 활성, 없으면 비활성
+if not os.path.exists(FALL_ALERT_FILE):
+    with open(FALL_ALERT_FILE, "w") as f:
+        f.write("1")
+
+def check_fall_alert():
+    return os.path.exists(FALL_ALERT_FILE)
+
+def reset_fall_alert():
+    with open(FALL_ALERT_FILE, "w") as f:
+        f.write("1")
+    print("✅ IMU 알람 다시 활성화")
+
+
+current_process = None
+process_lock = threading.Lock()
+.
+.
+.
+def run_fall_help_safe():
+    print("🚨 [넘어짐 감지] 도움 요청 시작")
+   
+    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
+    if os.path.exists(FALL_ALERT_FILE):
+        os.remove(FALL_ALERT_FILE)
+   
+    kill_current_process_and_wait()
+    speak("카트가 넘어졌습니다. 도움을 요청합니다.")
+    time.sleep(2.0)
+   
+    try:
+        # 🔥 blocking call: device2.py 종료될 때까지 기다림
+        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])
+    except Exception as e:
+        print(f"도움 요청 코드 실행 실패: {e}")
+   
+    # 종료 후 플래그 복원 → IMU 재감지 가능
+    reset_fall_alert()
 ```
 </details>
 
@@ -1092,6 +1140,7 @@ if __name__ == "__main__":
 <summary>카트 넘어짐에 대한 디바이스 코드</summary>
 
 ```python
+
 ```
 </details>
 
