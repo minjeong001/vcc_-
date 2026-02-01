@@ -414,7 +414,7 @@ while True:
 <summary> 최저가 검색(코드)</summary>
 
 ```python
-  from picamera2 import Picamera2
+from picamera2 import Picamera2
 from ultralytics import YOLO
 import cv2
 import requests
@@ -424,6 +424,7 @@ import uuid
 import subprocess
 import speech_recognition as sr
 from gtts import gTTS
+import sqlite3
 
 def load_keys():
     with open("naver_key.txt", "r") as f:
@@ -486,6 +487,7 @@ def search_lowest_price(query, is_buldak):
     params = {"query": query, "display": 10, "sort": "asc"}
     res = requests.get(url, headers=headers, params=params)
     items = res.json().get("items", [])
+
     filtered = []
     for item in items:
         title = item["title"]
@@ -494,6 +496,7 @@ def search_lowest_price(query, is_buldak):
         if any(x in title for x in EXCLUDE_KEYWORDS):
             continue
         filtered.append(item)
+
     return filtered[0] if filtered else None
 
 def detect_ramen(model, frame):
@@ -539,6 +542,26 @@ def run_once(model, picam2):
 
     if item:
         speak(f"{kor_name}의 최저가는 {item['lprice']}원 입니다.")
+        conn = sqlite3.connect("DB경로")
+        cursor = conn.cursor()
+        cursor.execute("SELECT price FROM ramen_info WHERE name=?", (kor_name,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            mart_price = int(row[0])
+            online_price = int(item['lprice'])
+            diff = mart_price - online_price
+
+            if diff > 0:
+                speak(f"온라인 최저가가 마트보다 {diff}원 더 저렴합니다.")
+            elif diff < 0:
+                speak(f"마트 가격이 온라인 최저가보다 {abs(diff)}원 더 저렴합니다.")
+            else:
+                speak("마트 가격과 온라인 최저가가 동일합니다.")
+        else:
+            speak("마트 가격 정보를 찾지 못했습니다.")
+
     else:
         speak("최저가를 찾지 못했습니다.")
 
