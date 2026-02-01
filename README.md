@@ -25,6 +25,8 @@
 - usb 포트에 사운드 카드 연결 + 이어폰 연결 -> 음성인식 가능
 
 **Arduino bread board view**
+
+
 ![아두이노 브레드보드 뷰](uno.png)
 - 송신부
 
