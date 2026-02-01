@@ -1127,7 +1127,7 @@ def check_fall_alert():
 def reset_fall_alert():
     with open(FALL_ALERT_FILE, "w") as f:
         f.write("1")
-    print("✅ IMU 알람 다시 활성화")
+    print("IMU 알람 다시 활성화")
 
 
 current_process = None
@@ -1136,7 +1136,7 @@ process_lock = threading.Lock()
 .
 .
 def run_fall_help_safe():
-    print("🚨 [넘어짐 감지] 도움 요청 시작")
+    print(" [넘어짐 감지] 도움 요청 시작")
 
     if os.path.exists(FALL_ALERT_FILE):    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
         os.remove(FALL_ALERT_FILE)
@@ -1146,7 +1146,7 @@ def run_fall_help_safe():
     time.sleep(2.0)
    
     try:
-        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])   # 🔥 blocking call: device2.py 종료될 때까지 기다림
+        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])   # blocking call: device2.py 종료될 때까지 기다림
     except Exception as e:
         print(f"도움 요청 코드 실행 실패: {e}")
    
@@ -1201,12 +1201,12 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
 
 
-        if self.path == "/stop":         # 🔴종료 요청 (직원 도착)
+        if self.path == "/stop":         # 종료 요청 (직원 도착)
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"STOP")
             print("STOP received. Exiting.")
-            os._exit(0)   # ❗ 사유 전송 없이 그냥 종료
+            os._exit(0)   # 사유 전송 없이 그냥 종료
 
 
         if self.path in ("/", "/index.html"):        # 메인 페이지
@@ -1367,10 +1367,10 @@ def init_imu():
     try:
         i2c = busio.I2C(board.SCL, board.SDA)
         sensor = adafruit_bno055.BNO055_I2C(i2c)
-        print("✅ IMU 센서 연결 성공")
+        print(" IMU 센서 연결 성공")
         return sensor
     except Exception as e:
-        print(f"⚠️ IMU 센서 연결 실패: {e}")
+        print(f" IMU 센서 연결 실패: {e}")
         return None
 
 imu = init_imu()
@@ -1392,7 +1392,7 @@ def check_fall_alert():
 def reset_fall_alert():
     with open(FALL_ALERT_FILE, "w") as f:
         f.write("1")
-    print("✅ IMU 알람 다시 활성화")
+    print(" IMU 알람 다시 활성화")
 
 
 current_process = None
@@ -1402,7 +1402,7 @@ def kill_current_process_and_wait():
     global current_process
     with process_lock:
         if current_process and current_process.poll() is None:
-            print("⛔ 기존 작업 종료 및 카메라 해제 중...")
+            print(" 기존 작업 종료 및 카메라 해제 중...")
             try:
                 pgid = os.getpgid(current_process.pid)
                 os.killpg(pgid, signal.SIGTERM)
@@ -1436,7 +1436,7 @@ def run_manual_help():
     run_process("/home/도움요청 디바이스 파일", "도움 요청을 보냈습니다.")
 
 def run_fall_help_safe():
-    print("🚨 [넘어짐 감지] 도움 요청 시작")
+    print("[넘어짐 감지] 도움 요청 시작")
     if os.path.exists(FALL_ALERT_FILE):    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
         os.remove(FALL_ALERT_FILE)
    
@@ -1445,7 +1445,7 @@ def run_fall_help_safe():
     time.sleep(2.0)
    
     try: 
-        subprocess.call(["python3", "/home/넘어짐 디바이스 파일일.py"])   # 🔥 blocking call: device2.py 종료될 때까지 기다림
+        subprocess.call(["python3", "/home/넘어짐 디바이스 파일.py"])   # blocking call: device2.py 종료될 때까지 기다림
     except Exception as e:
         print(f"도움 요청 코드 실행 실패: {e}")
     reset_fall_alert()   # 종료 후 플래그 복원 → IMU 재감지 가능
@@ -1491,14 +1491,14 @@ BTN_PRICE.when_pressed = lambda: run_process("/home/최저가 비교 파일", "�
 BTN_HELP.when_pressed  = run_manual_help
 
 if __name__ == "__main__":
-    print("✅ 카트 시스템 가동 중...")
+    print("카트 시스템 가동 중...")
     threading.Thread(target=imu_watch_loop, daemon=True).start()
     threading.Thread(target=fall_handler_loop, daemon=True).start()
     try:
         pause()  # 버튼 이벤트 및 스레드 계속 유지
     except KeyboardInterrupt:
         kill_current_process_and_wait()
-        print("\n👋 시스템 종료")
+        print("\n 시스템 종료")
 
 ```
 </details>
@@ -1722,6 +1722,8 @@ void loop() {
  - 3번 사진 : ‘직원 이동’ 탭 선택 시 담당 직원이 이동 중임을 사용자에게 tts 음성으로 안내하고 도움 요청 사유 선택 및 직접 입력 가능
  - 4번 사진 : ‘종료’ 탭을 누르면 도움 요청이 종료되며, 요청 사유와 처리 소요 시간이 기록됨 
 
+- 넘어짐으로 인한 도움 요청
+  ![넘어짐](cart.png)
 ---
 
 ## 보안할 점
