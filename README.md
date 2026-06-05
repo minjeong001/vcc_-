@@ -68,9 +68,9 @@ def speak(text):
     os.remove(filename)
 
 speak("상품을 카메라 앞에 나둬주세요.")    
-model = YOLO("/home/학습 pt 파일 경로")
+model = YOLO("/home/see2407me/ramen.pt")
 
-output_path = "/home/결과 저장 경로"
+output_path = "/home/see2407me/result/"
 os.makedirs(output_path, exist_ok=True)
 
 cam = Picamera2()
@@ -79,7 +79,7 @@ cam.start()
 
 label_to_kor = {
     "sinlamen": "신라면",
-    "jinramyun": "진라면",
+    "jinramyun": "진라면 매운맛",
     "nuguri": "너구리",
     "jjapagetti": "짜파게티",
     "Firechickenboggummyun": "불닭볶음면"
@@ -109,6 +109,7 @@ while True:
 
 cam.stop()
 cv2.destroyAllWindows()
+
 ```
 </details>
 
@@ -125,11 +126,17 @@ import time
 from gtts import gTTS
 import uuid
 import subprocess
+import sqlite3
 
-
-output_path = "/home/결과 저장 경로로"
+# ----------------------------------------
+# 결과 저장 경로
+# ----------------------------------------
+output_path = "/home/see2407me/result/"
 os.makedirs(output_path, exist_ok=True)
 
+# ----------------------------------------
+# TTS 함수
+# ----------------------------------------
 def speak(text):
     filename = f"/tmp/tts_{uuid.uuid4()}.mp3"
     tts = gTTS(text=text, lang='ko')
@@ -137,6 +144,9 @@ def speak(text):
     subprocess.call(f'mpg123 "{filename}"', shell=True)
     os.remove(filename)
 
+# ----------------------------------------
+# OCR 유통기한 추출
+# ----------------------------------------
 def extract_date(text):
     text = text.replace(" ", "").replace("까지", "").replace("유통기한", "").replace("제조", "")
     m = re.search(r"\d{4}\.\d{2}\.\d{2}", text)
@@ -144,8 +154,41 @@ def extract_date(text):
         return m.group()
     return None
 
-speak("유통기한을 인식하기 위해 상품을 돌려주세요.")
+# ----------------------------------------
+# 상품 이름 로드 (d 파일에서 이미 인식됨)
+# ----------------------------------------
+label_to_kor = {
+    "shinramen": "신라면",
+    "jinramyun": "진라면",
+    "nuguri": "너구리",
+    "jjapagetti": "짜파게티",
+    "buldakbokkeummyun": "불닭볶음면"
+}
 
+with open("/home/see2407me/result/ramen.txt") as f:
+    ramen_label = f.read().strip()
+
+kor_name = label_to_kor.get(ramen_label, ramen_label)
+
+# ----------------------------------------
+# DB 조회 (라면 정보 + 위치)
+# ----------------------------------------
+conn = sqlite3.connect("/home/see2407me/ramen.db")
+cursor = conn.cursor()
+cursor.execute("SELECT * FROM ramen_info WHERE name=?", (kor_name,))
+row = cursor.fetchone()
+conn.close()
+
+if row:
+    location = row[-1]  # 마지막 컬럼이 location이라 가정
+    speak(f"이 제품은 {kor_name}입니다.")
+    speak(f"{kor_name}의 유통기한은 {location}에 있습니다. 유통기한 인식을 위해 이 위치로 라면을 조정해주세요.")
+else:
+    speak(f"{kor_name}의 위치 정보를 찾을 수 없습니다. 유통기한 확인을 위해 상품을 비춰주세요.")
+
+# ----------------------------------------
+# 카메라 설정
+# ----------------------------------------
 cam = Picamera2()
 cam.configure(cam.create_video_configuration(main={"format":"XRGB8888","size":(640,480)}))
 cam.start()
@@ -156,6 +199,9 @@ print("자동 인식모드 시작")
 frame_count = 0
 max_attempts = 100
 
+# ----------------------------------------
+# OCR 루프
+# ----------------------------------------
 while True:
     frame = cam.capture_array()
     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
@@ -172,7 +218,8 @@ while True:
     expiry = extract_date(text)
 
     if expiry:
-        with open(output_path + "expiry.txt", "w") as f:
+        # 결과 저장
+        with open(os.path.join(output_path, "expiry.txt"), "w") as f:
             f.write(expiry)
 
         print("유통기한:", expiry)
@@ -184,7 +231,7 @@ while True:
         speak("유통기한을 찾지 못했습니다. 상품 위치를 조정해주세요.")
         frame_count = 0
         continue
-       
+
     if cv2.waitKey(1) == ord('q'):
         break
 
@@ -235,6 +282,9 @@ import subprocess
 import speech_recognition as sr
 from gtts import gTTS
 
+# ========================================
+# 🎤 음성 인식 / TTS 설정
+# ========================================
 r = sr.Recognizer()
 mic = sr.Microphone(device_index=1)
 
@@ -255,6 +305,9 @@ def format_expiry(expiry):
     except:
         return expiry  # 혹시 포맷이 이상하면 그대로 반환
 
+# ========================================
+# 음성 인식 (응/아니)
+# ========================================
 YES_KEYWORDS = ["예", "네", "응", "줘" ,"그래", "해","알려줘"]
 NO_KEYWORDS = ["아니", "아니요", "괜찮아", "필요없어", "됐어"]
 
@@ -278,6 +331,9 @@ def recognize_yes_no():
     except:
         return "unknown"
 
+# ========================================
+# 상품 이름/유통기한 로드
+# ========================================
 label_to_kor = {
     "shinramen": "신라면",
     "jinramyun": "진라면",
@@ -286,28 +342,37 @@ label_to_kor = {
     "buldakbokkeummyun": "불닭볶음면"
 }
 
-with open("/home/상품 txt파일 경로") as f:
+with open("/home/see2407me/result/ramen.txt") as f:
     ramen_label = f.read().strip()
 
 kor_name = label_to_kor.get(ramen_label, ramen_label)
 
-with open("/home/파일 경로") as f:
+with open("/home/see2407me/result/expiry.txt") as f:
     expiry = f.read().strip()
 
 expiry = format_expiry(expiry)
 
-conn = sqlite3.connect("/home/생성한 DB경로로")
+# ========================================
+# DB 조회
+# ========================================
+conn = sqlite3.connect("/home/see2407me/ramen.db")
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM ramen_info WHERE name=?", (kor_name,))
 row = cursor.fetchone()
 conn.close()
 
-speak(f"이 제품은 {kor_name}입니다.")
+# ========================================
+# 기본 정보 안내
+# ========================================
+
 
 if row:
-    _, name, cal, sodium, fat, carb, protein, price = row
-    speak(f"가격은 {price}원이고 유통기한은 {expiry}입니다.")
+    _, name, cal, sodium, fat, carb, protein, price, expiration_date, location = row
+    speak(f"{name}의 가격은 {price}원이고 유통기한은 {expiry}입니다.")
 
+# ========================================
+# 상세 정보 질문 루프
+# ==================================품======
 speak("상세 정보를 읽어드릴까요? 1초 후에 응 또는 아니라고 말씀해주세요.")
 
 while True:
@@ -348,7 +413,7 @@ from gtts import gTTS
 r = sr.Recognizer()
 mic = sr.Microphone(device_index=1)
 
-YES_WORDS = ["예", "네", "응", "그래", "해", "계속","줘줘"]
+YES_WORDS = ["예", "네", "응", "그래", "해", "계속"]
 NO_WORDS = ["아니", "아니요", "괜찮아", "그만", "종료", "중지"]
 
 def speak(text):
@@ -379,9 +444,9 @@ def run_and_wait(cmd):
 
 while True:
 
-    run_and_wait("python3 /home/상품 인식 파일")
-    run_and_wait("python3 /home/유통기한 추출 파일.py")
-    run_and_wait("python3 /home/tts파일.py")
+    run_and_wait("python3 /home/see2407me/d.py")
+    run_and_wait("python3 /home/see2407me/2.py")
+    run_and_wait("python3 /home/see2407me/tts2.py")
 
     speak("상품 인식을 계속하시겠습니까? 1초 후에 응 또는 아니라고 말씀해주세요.")
 
@@ -544,7 +609,11 @@ def run_once(model, picam2):
 
     if item:
         speak(f"{kor_name}의 최저가는 {item['lprice']}원 입니다.")
-        conn = sqlite3.connect("DB경로")
+
+        # ========================================
+        # 🔥 마트(DB) 가격과 온라인 최저가 비교 (추가된 부분)
+        # ========================================
+        conn = sqlite3.connect("/home/see2407me/ramen.db")
         cursor = conn.cursor()
         cursor.execute("SELECT price FROM ramen_info WHERE name=?", (kor_name,))
         row = cursor.fetchone()
@@ -1309,6 +1378,9 @@ if __name__ == "__main__":
 <summary>전체 main 코드</summary>
 
 ```python
+# =========================
+# Imports
+# =========================
 from gpiozero import Button
 import subprocess
 import time
@@ -1318,19 +1390,25 @@ import os
 import uuid
 import signal
 from signal import pause
+
 from gtts import gTTS
+
 import board
 import busio
 import adafruit_bno055
 
-
+# =========================
+# Button setup
+# =========================
 BTN_SCAN  = Button(17, pull_up=True, bounce_time=0.3)
 BTN_PRICE = Button(27, pull_up=True, bounce_time=0.3)
 BTN_HELP  = Button(22, pull_up=True, bounce_time=0.3)
 
-
-SERVER_PATH = "/home/서버 파일"
-SERVER_IP = "라즈베리 IP"
+# =========================
+# Server auto start
+# =========================
+SERVER_PATH = "/home/see2407me/server.py"
+SERVER_IP = "172.20.10.4"
 SERVER_PORT = 5000
 
 def is_port_open(ip, port):
@@ -1351,7 +1429,9 @@ if not is_port_open(SERVER_IP, SERVER_PORT):
     except:
         pass
 
-
+# =========================
+# TTS (non-blocking)
+# =========================
 def speak(text):
     def _speak(text):
         try:
@@ -1364,27 +1444,35 @@ def speak(text):
             print(f"TTS Error: {e}")
     threading.Thread(target=_speak, args=(text,), daemon=True).start()
 
-
+# =========================
+# IMU setup
+# =========================
 def init_imu():
     try:
         i2c = busio.I2C(board.SCL, board.SDA)
         sensor = adafruit_bno055.BNO055_I2C(i2c)
-        print(" IMU 센서 연결 성공")
+        print("✅ IMU 센서 연결 성공")
         return sensor
     except Exception as e:
-        print(f" IMU 센서 연결 실패: {e}")
+        print(f"⚠️ IMU 센서 연결 실패: {e}")
         return None
 
 imu = init_imu()
 
-TILT_THRESHOLD = 9.65
+TILT_THRESHOLD = 9.2
 RECOVER_THRESHOLD = 3.0
+TILT_HOLD_TIME = 1.5
+
 tilt_active = False
+tilt_start_time = None
 fall_event = threading.Event()
 
-
+# =========================
+# Fall alert 파일 플래그
+# =========================
 FALL_ALERT_FILE = "/tmp/fall_alert.flag"
-if not os.path.exists(FALL_ALERT_FILE):  # 초기 상태: 파일 있으면 활성, 없으면 비활성
+
+if not os.path.exists(FALL_ALERT_FILE):
     with open(FALL_ALERT_FILE, "w") as f:
         f.write("1")
 
@@ -1394,9 +1482,11 @@ def check_fall_alert():
 def reset_fall_alert():
     with open(FALL_ALERT_FILE, "w") as f:
         f.write("1")
-    print(" IMU 알람 다시 활성화")
+    print("✅ IMU 알람 다시 활성화")
 
-
+# =========================
+# Process tracking
+# =========================
 current_process = None
 process_lock = threading.Lock()
 
@@ -1404,7 +1494,7 @@ def kill_current_process_and_wait():
     global current_process
     with process_lock:
         if current_process and current_process.poll() is None:
-            print(" 기존 작업 종료 및 카메라 해제 중...")
+            print("⛔ 기존 작업 종료 및 카메라 해제 중...")
             try:
                 pgid = os.getpgid(current_process.pid)
                 os.killpg(pgid, signal.SIGTERM)
@@ -1434,52 +1524,77 @@ def run_process(path, voice=None):
         except Exception as e:
             print(f"실행 실패: {e}")
 
+# =========================
+# Fall & Help Runners
+# =========================
 def run_manual_help():
-    run_process("/home/도움요청 디바이스 파일", "도움 요청을 보냈습니다.")
+    run_process("/home/see2407me/device.py", "도움 요청을 보냈습니다.")
 
 def run_fall_help_safe():
-    print("[넘어짐 감지] 도움 요청 시작")
-    if os.path.exists(FALL_ALERT_FILE):    # IMU 알람 잠시 비활성화 → 플래그 파일 삭제
+    print("🚨 [넘어짐 감지] 도움 요청 시작")
+
+    if os.path.exists(FALL_ALERT_FILE):
         os.remove(FALL_ALERT_FILE)
-   
+
     kill_current_process_and_wait()
-    speak("카트가 넘어졌습니다. 도움을 요청합니다.")
+    speak("카트가 넘어졌습니다. 도움을 요청합니다. 직원이 이동 중입니다.")
     time.sleep(2.0)
-   
-    try: 
-        subprocess.call(["python3", "/home/넘어짐 디바이스 파일.py"])   # blocking call: device2.py 종료될 때까지 기다림
+
+    try:
+        subprocess.call(["python3", "/home/see2407me/device2.py"])
     except Exception as e:
         print(f"도움 요청 코드 실행 실패: {e}")
-    reset_fall_alert()   # 종료 후 플래그 복원 → IMU 재감지 가능
 
+    reset_fall_alert()
+
+# =========================
+# IMU & Fall Loops
+# =========================
 def imu_watch_loop():
-    global tilt_active, imu
+    global tilt_active, imu, tilt_start_time
     consecutive_none = 0
+
     while True:
-        fall_alert_active = check_fall_alert()  # 매 루프마다 상태 확인
+        fall_alert_active = check_fall_alert()
 
         if imu is None:
             imu = init_imu()
             if imu is None:
                 time.sleep(5)
                 continue
+
         try:
             gravity = imu.gravity
+
             if gravity and gravity[1] is not None:
                 gy = gravity[1]
                 consecutive_none = 0
 
                 if abs(gy) > TILT_THRESHOLD and not tilt_active and fall_alert_active:
-                    tilt_active = True
-                    fall_event.set()
-                elif abs(gy) < RECOVER_THRESHOLD:
+
+                    if tilt_start_time is None:
+                        tilt_start_time = time.time()
+
+                    elif time.time() - tilt_start_time >= TILT_HOLD_TIME:
+                        tilt_active = True
+                        fall_event.set()
+
+                else:
+                    if not tilt_active:
+                        tilt_start_time = None
+
+                if abs(gy) < RECOVER_THRESHOLD:
                     tilt_active = False
+                    tilt_start_time = None
+
             else:
                 consecutive_none += 1
                 if consecutive_none > 3:
                     imu = None
+
         except:
             imu = None
+
         time.sleep(0.2)
 
 def fall_handler_loop():
@@ -1488,19 +1603,25 @@ def fall_handler_loop():
         fall_event.clear()
         run_fall_help_safe()
 
-BTN_SCAN.when_pressed  = lambda: run_process("/home/상품인식 통합 파일", "상품 인식을 시작합니다.")
-BTN_PRICE.when_pressed = lambda: run_process("/home/최저가 비교 파일", "최저가 비교를 시작합니다.")
+# =========================
+# 버튼 이벤트
+# =========================
+BTN_SCAN.when_pressed  = lambda: run_process("/home/see2407me/text4.py", "상품 인식을 시작합니다.")
+BTN_PRICE.when_pressed = lambda: run_process("/home/see2407me/price9.py", "최저가 비교를 시작합니다.")
 BTN_HELP.when_pressed  = run_manual_help
 
+# =========================
+# Main
+# =========================
 if __name__ == "__main__":
-    print("카트 시스템 가동 중...")
+    print("✅ 카트 시스템 가동 중...")
     threading.Thread(target=imu_watch_loop, daemon=True).start()
     threading.Thread(target=fall_handler_loop, daemon=True).start()
     try:
-        pause()  # 버튼 이벤트 및 스레드 계속 유지
+        pause()
     except KeyboardInterrupt:
         kill_current_process_and_wait()
-        print("\n 시스템 종료")
+        print("\n👋 시스템 종료")
 
 ```
 </details>
